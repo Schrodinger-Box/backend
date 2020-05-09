@@ -1,0 +1,5 @@
+# Ignore all IDEA project files
+.idea/
+schrodinger-box.iml
+# Ignore configuration file
+schrodinger-box.yaml

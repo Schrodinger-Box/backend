@@ -1,0 +1,7 @@
+# Schrodinger's Box Backend Server Configuration File
+
+api:
+  telegram:
+    key: "1140803138:AAHAQqY_UFxjGBoY06QtaQv-zXCA84pH6RM"
+    # default cron interval is 1 execution per minute
+    cron: "* * * * *"
