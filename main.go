@@ -9,6 +9,7 @@ import (
     "github.com/spf13/viper"
 
     "schrodinger-box/internal/api"
+    "schrodinger-box/internal/callback"
     "schrodinger-box/internal/telegram"
 )
 
@@ -34,10 +35,12 @@ func main() {
     {
         auth := apiRouter.Group("auth")
         {
-            auth.POST("create_token", api.CreateToken)
+            auth.GET("create_token", api.CreateToken)
             // auth.DELETE("/delete_token", api.DeleteToken)
         }
     }
+
+    router.GET("/callback/openid", callback.HandleOpenidCallback)
 
     c := cron.New()
 
