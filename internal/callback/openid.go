@@ -7,12 +7,13 @@ import (
     "github.com/Schrodinger-Box/openid-go"
     "github.com/gin-gonic/gin"
     "github.com/jinzhu/gorm"
+    "github.com/spf13/viper"
 )
 
 func HandleOpenidCallback(ctx *gin.Context) {
     db := ctx.MustGet("DB").(*gorm.DB)
     gormStore := gormid.CreateNewStore(db)
-    fullUrl := "http://localhost:8080" + ctx.Request.URL.String()
+    fullUrl := viper.GetString("domain") + ctx.Request.URL.String()
     id, err := openid.Verify(
         fullUrl,
         gormStore.DiscoveryCache, gormStore.NonceStore)

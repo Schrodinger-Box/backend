@@ -9,6 +9,7 @@ import (
     "github.com/google/jsonapi"
     "github.com/google/uuid"
     "github.com/jinzhu/gorm"
+    "github.com/spf13/viper"
 
     "schrodinger-box/internal/model"
 )
@@ -23,8 +24,10 @@ func CreateToken(ctx *gin.Context) {
         "fullname": false,
     })
     if url, err := openid.RedirectURL("https://openid.nus.edu.sg",
-        "http://localhost:8080/callback/openid",
-        "http://localhost:8080/"); err == nil {
+        viper.GetString("domain") + "/callback/openid",
+        viper.GetString("domain"),
+        viper.GetBool("openid.associationMode"),
+        viper.GetBool("openid.doubleVerification")); err == nil {
         db := ctx.MustGet("DB").(*gorm.DB)
         secret := uuid.New().String()
         token := model.Token{
