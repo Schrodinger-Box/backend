@@ -10,6 +10,7 @@ import (
 
     "schrodinger-box/internal/api"
     "schrodinger-box/internal/callback"
+    "schrodinger-box/internal/middleware"
     "schrodinger-box/internal/telegram"
 )
 
@@ -28,19 +29,19 @@ func main() {
     }
 
     router := gin.Default()
-    // router.Use(middleware.GeneralMiddleware())
+    router.Use(middleware.DatabaseMiddleware(viper.GetString("database")))
+    router.Use(middleware.GeneralMiddleware())
 
     // router group dealing with all API calls from front end
     apiRouter := router.Group("/api")
     {
-        auth := apiRouter.Group("auth")
-        {
-            auth.GET("create_token", api.CreateToken)
-            // auth.DELETE("/delete_token", api.DeleteToken)
-        }
+        apiRouter.POST("token", api.CreateToken)
     }
 
-    router.GET("/callback/openid", callback.HandleOpenidCallback)
+    callbackRouter := router.Group("/callback")
+    {
+        callbackRouter.GET("/openid", callback.HandleOpenidCallback)
+    }
 
     c := cron.New()
 

@@ -3,3 +3,5 @@
 schrodinger-box.iml
 # Ignore configuration file
 schrodinger-box.yaml
+# Ignore go vendor local copies
+vendor/
