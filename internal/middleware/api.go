@@ -5,7 +5,7 @@ import (
     "github.com/google/jsonapi"
 )
 
-func GeneralMiddleware() gin.HandlerFunc {
+func APIMiddleware() gin.HandlerFunc {
     return func(ctx *gin.Context) {
         ctx.Header("Content-Type", jsonapi.MediaType)
     }

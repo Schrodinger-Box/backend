@@ -30,17 +30,17 @@ func main() {
 
     router := gin.Default()
     router.Use(middleware.DatabaseMiddleware(viper.GetString("database")))
-    router.Use(middleware.GeneralMiddleware())
 
     // router group dealing with all API calls from front end
     apiRouter := router.Group("/api")
+    apiRouter.Use(middleware.APIMiddleware())
     {
         apiRouter.POST("token", api.CreateToken)
     }
 
     callbackRouter := router.Group("/callback")
     {
-        callbackRouter.GET("/openid", callback.HandleOpenidCallback)
+        callbackRouter.GET("/openid/:tokenId", callback.HandleOpenidCallback)
     }
 
     c := cron.New()

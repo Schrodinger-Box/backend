@@ -11,8 +11,8 @@ type Token struct {
     // - expired
     // - destroyed
     Status      *string     `jsonapi:"attr,status" gorm:"not null;default:'created'"`
-    NUSID       string      `jsonapi:"attr,nusid,omitempty"`
 
+    IdentityFields
     DBTime
 
     // URL redirecting user to openid.nus.edu.sg to authenticate himself
@@ -22,8 +22,6 @@ type Token struct {
 
 func (token Token) JSONAPILinks() *jsonapi.Links {
     return &jsonapi.Links{
-        "auth": jsonapi.Link{
-            Href: token.AuthURL,
-        },
+        "auth": token.AuthURL,
     }
 }
