@@ -35,7 +35,20 @@ func main() {
 	apiRouter := router.Group("/api")
 	apiRouter.Use(middleware.APIMiddleware())
 	{
-		apiRouter.POST("token", api.CreateToken)
+		apiRouter.POST("/token", api.CreateToken)
+		userRouter := apiRouter.Group("/user")
+		userRouter.Use(middleware.TokenMiddleware())
+		{
+			userRouter.GET("/", api.UserGetSelf)
+			userRouter.POST("/", api.UserCreate)
+			userRouter.GET("/:id", api.UserGet)
+			userRouter.PATCH("/:id", api.UserUpdate)
+		}
+		eventRouter := apiRouter.Group("/event")
+		eventRouter.Use(middleware.TokenMiddleware())
+		{
+
+		}
 	}
 
 	callbackRouter := router.Group("/callback")

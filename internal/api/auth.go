@@ -12,6 +12,7 @@ import (
 	"github.com/jinzhu/gorm"
 	"github.com/spf13/viper"
 
+	"schrodinger-box/internal/misc"
 	"schrodinger-box/internal/model"
 )
 
@@ -37,7 +38,7 @@ func CreateToken(ctx *gin.Context) {
 			token.AuthURL = url
 			ctx.Writer.WriteHeader(http.StatusCreated)
 			if err := jsonapi.MarshalPayload(ctx.Writer, &token); err != nil {
-				http.Error(ctx.Writer, err.Error(), http.StatusInternalServerError)
+				misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
 			}
 		} else {
 			log.Print(err)

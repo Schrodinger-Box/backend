@@ -15,7 +15,11 @@ func DatabaseMiddleware(connString string) gin.HandlerFunc {
 	}
 
 	// Migrating table
-	db.AutoMigrate(model.Token{})
+	tables := []interface{}{
+		model.Token{},
+		model.User{},
+	}
+	db.AutoMigrate(tables...)
 
 	return func(ctx *gin.Context) {
 		ctx.Set("DB", db)
