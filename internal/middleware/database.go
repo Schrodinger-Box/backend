@@ -2,14 +2,14 @@ package middleware
 
 import (
 	"github.com/gin-gonic/gin"
-	_ "github.com/go-sql-driver/mysql"
-	"github.com/jinzhu/gorm"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 
 	"schrodinger-box/internal/model"
 )
 
 func DatabaseMiddleware(connString string) gin.HandlerFunc {
-	db, err := gorm.Open("mysql", connString)
+	db, err := gorm.Open(mysql.Open(connString), &gorm.Config{})
 	if err != nil {
 		panic("Fail to connect to DB: " + err.Error())
 	}

@@ -14,8 +14,6 @@ type User struct {
 
 	IdentityFields
 	DBTime
-
-	jsonapi.Linkable
 }
 
 func (user *User) JSONAPILinks() *jsonapi.Links {

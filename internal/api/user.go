@@ -1,11 +1,12 @@
 package api
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/jsonapi"
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
 
 	"schrodinger-box/internal/misc"
 	"schrodinger-box/internal/model"
@@ -65,7 +66,7 @@ func UserGet(ctx *gin.Context) {
 	user := &model.User{}
 	db := ctx.MustGet("DB").(*gorm.DB)
 	if err := db.First(user, id).Error; err != nil {
-		if gorm.IsRecordNotFoundError(err) {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			misc.ReturnStandardError(ctx, http.StatusNotFound, "user does not exist")
 			return
 		} else {
@@ -89,7 +90,7 @@ func UserUpdate(ctx *gin.Context) {
 	user := &model.User{}
 	db := ctx.MustGet("DB").(*gorm.DB)
 	if err := db.First(user, userRequest.ID).Error; err != nil {
-		if gorm.IsRecordNotFoundError(err) {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			misc.ReturnStandardError(ctx, http.StatusNotFound, "user does not exist")
 			return
 		} else {

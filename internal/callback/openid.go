@@ -7,8 +7,8 @@ import (
 	"github.com/Schrodinger-Box/gormid"
 	"github.com/Schrodinger-Box/openid-go"
 	"github.com/gin-gonic/gin"
-	"github.com/jinzhu/gorm"
 	"github.com/spf13/viper"
+	"gorm.io/gorm"
 
 	"schrodinger-box/internal/model"
 )

@@ -1,10 +1,11 @@
 package middleware
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
 
 	"schrodinger-box/internal/misc"
 	"schrodinger-box/internal/model"
@@ -19,7 +20,7 @@ func TokenMiddleware() gin.HandlerFunc {
 			return
 		}
 		db := ctx.MustGet("DB").(*gorm.DB)
-		if err := db.Where(&token).First(&token).Error; gorm.IsRecordNotFoundError(err) {
+		if err := db.Where(&token).First(&token).Error; errors.Is(err, gorm.ErrRecordNotFound) {
 			misc.ReturnStandardError(ctx, 401, "token information invalid")
 			return
 		} else if err != nil {
@@ -33,7 +34,7 @@ func TokenMiddleware() gin.HandlerFunc {
 			user.NUSID = token.NUSID
 			if err := db.Where(&user).First(&user).Error; err == nil {
 				ctx.Set("User", &user)
-			} else if !gorm.IsRecordNotFoundError(err) {
+			} else if !errors.Is(err, gorm.ErrRecordNotFound) {
 				// There is something wrong other than RecordNotFound (RNF means user has not been created)
 				misc.ReturnStandardError(ctx, 500, err.Error())
 				return

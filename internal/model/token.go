@@ -17,7 +17,6 @@ type Token struct {
 
 	// URL redirecting user to openid.nus.edu.sg to authenticate himself
 	AuthURL string `gorm:"-"`
-	jsonapi.Linkable
 }
 
 func (token Token) JSONAPILinks() *jsonapi.Links {
