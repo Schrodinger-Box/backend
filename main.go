@@ -41,8 +41,8 @@ func main() {
 		{
 			userRouter.GET("/", api.UserGetSelf)
 			userRouter.POST("/", api.UserCreate)
+			userRouter.PATCH("/", api.UserUpdate)
 			userRouter.GET("/:id", api.UserGet)
-			userRouter.PATCH("/:id", api.UserUpdate)
 		}
 		eventRouter := apiRouter.Group("/event")
 		eventRouter.Use(middleware.TokenMiddleware())
