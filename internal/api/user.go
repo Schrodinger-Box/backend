@@ -33,7 +33,7 @@ func UserCreate(ctx *gin.Context) {
 	}
 	userRequest := &model.User{}
 	if err := jsonapi.UnmarshalPayload(ctx.Request.Body, userRequest); err != nil {
-		misc.ReturnStandardError(ctx, http.StatusBadRequest, "cannot unmarshal JSON of request")
+		misc.ReturnStandardError(ctx, http.StatusBadRequest, "cannot unmarshal JSON of request: "+err.Error())
 		return
 	} else if userRequest.Nickname == nil || userRequest.Type == nil {
 		misc.ReturnStandardError(ctx, http.StatusBadRequest, "nickname and type MUST be provided")

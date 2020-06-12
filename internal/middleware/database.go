@@ -18,6 +18,7 @@ func DatabaseMiddleware(connString string) gin.HandlerFunc {
 	tables := []interface{}{
 		model.Token{},
 		model.User{},
+		model.Event{},
 	}
 	db.AutoMigrate(tables...)
 

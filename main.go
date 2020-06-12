@@ -47,7 +47,8 @@ func main() {
 		eventRouter := apiRouter.Group("/event")
 		eventRouter.Use(middleware.TokenMiddleware())
 		{
-
+			eventRouter.POST("/", api.EventCreate)
+			eventRouter.GET("/:id", api.EventGet)
 		}
 	}
 
