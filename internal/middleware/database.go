@@ -19,6 +19,7 @@ func DatabaseMiddleware(connString string) gin.HandlerFunc {
 		model.Token{},
 		model.User{},
 		model.Event{},
+		model.TelegramSubscription{},
 	}
 	db.AutoMigrate(tables...)
 

@@ -3,11 +3,11 @@ package model
 import "github.com/google/jsonapi"
 
 type Token struct {
-	ID     uint    `jsonapi:"primary,token" gorm:"primary_key" header:"X-Token-ID"`
-	Secret *string `jsonapi:"attr,secret" gorm:"not null" header:"X-Token-Secret"`
+	ID     uint    `jsonapi:"primary,token" gorm:"primary_key" header:"X-Token-ID" binding:"required"`
+	Secret *string `jsonapi:"attr,secret" gorm:"not null" header:"X-Token-Secret" binding:"required"`
 	// Status codes:
-	// - created :  newly created, not linked to any NUSID
-	// - active  :  user has authenticated himself through OpenID
+	// - created : newly created, not linked to any NUSID
+	// - active  : user has authenticated himself through OpenID
 	// - expired
 	// - destroyed
 	Status *string `jsonapi:"attr,status" gorm:"not null;default:'created'"`

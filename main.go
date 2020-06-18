@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 
 	"github.com/gin-gonic/gin"
@@ -11,6 +12,7 @@ import (
 	"schrodinger-box/internal/api"
 	"schrodinger-box/internal/callback"
 	"schrodinger-box/internal/middleware"
+	"schrodinger-box/internal/model"
 	"schrodinger-box/internal/telegram"
 )
 
@@ -28,8 +30,10 @@ func main() {
 		panic(fmt.Errorf("Fatal error config file: %s \n", err))
 	}
 
+	connString := viper.GetString("database")
 	router := gin.Default()
-	router.Use(middleware.DatabaseMiddleware(viper.GetString("database")))
+	router.Use(gin.Recovery())
+	router.Use(middleware.DatabaseMiddleware(connString))
 
 	// router group dealing with all API calls from front end
 	apiRouter := router.Group("/api")
@@ -57,14 +61,32 @@ func main() {
 		callbackRouter.GET("/openid/:tokenId", callback.HandleOpenidCallback)
 	}
 
+	router.GET("/print_token", middleware.TokenMiddleware(), printToken)
+	router.GET("/ping", printPing)
+
 	c := cron.New()
 
 	// telegram updates handler
-	go telegram.Loop()
+	go telegram.Loop(connString)
 	// telegram event scheduler
-	c.AddFunc(viper.GetString("api.telegram.cron"), telegram.Cron)
+	c.AddFunc(viper.GetString("api.telegram.cron"), func() { telegram.Cron(connString) })
 
 	c.Start()
 	// listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
 	router.Run()
+}
+
+func printToken(ctx *gin.Context) {
+	_, exists := ctx.Get("User")
+	if !exists {
+		// User has not been created, return 404 to tell client to create user
+		ctx.String(http.StatusBadRequest, "You have not yet create a Schrodinger's Box account.")
+		return
+	}
+	token := ctx.MustGet("Token").(*model.Token)
+	ctx.String(http.StatusOK, "Your Token ID is: %d;\nYour Token Secret is: %s", token.ID, *token.Secret)
+}
+
+func printPing(ctx *gin.Context) {
+	ctx.String(http.StatusOK, "pong")
 }
