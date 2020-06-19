@@ -19,7 +19,7 @@ func UserGetSelf(ctx *gin.Context) {
 		misc.ReturnStandardError(ctx, 404, "user has not been created")
 		return
 	}
-	ctx.Writer.WriteHeader(http.StatusOK)
+	ctx.Status(http.StatusOK)
 	if err := jsonapi.MarshalPayload(ctx.Writer, user.(*model.User)); err != nil {
 		http.Error(ctx.Writer, err.Error(), http.StatusInternalServerError)
 	}
@@ -53,7 +53,7 @@ func UserCreate(ctx *gin.Context) {
 		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
 		return
 	}
-	ctx.Writer.WriteHeader(http.StatusCreated)
+	ctx.Status(http.StatusCreated)
 	if err := jsonapi.MarshalPayload(ctx.Writer, user); err != nil {
 		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
 		return
@@ -74,7 +74,7 @@ func UserGet(ctx *gin.Context) {
 			return
 		}
 	}
-	ctx.Writer.WriteHeader(http.StatusOK)
+	ctx.Status(http.StatusOK)
 	if err := jsonapi.MarshalPayload(ctx.Writer, user); err != nil {
 		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
 		return
@@ -110,7 +110,7 @@ func UserUpdate(ctx *gin.Context) {
 		return
 	}
 	// No attributes provided by the server side
-	ctx.Writer.WriteHeader(http.StatusOK)
+	ctx.Status(http.StatusOK)
 	if err := jsonapi.MarshalPayload(ctx.Writer, user); err != nil {
 		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
 		return

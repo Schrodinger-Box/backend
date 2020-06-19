@@ -10,8 +10,11 @@ import (
 	"github.com/spf13/viper"
 )
 
+/*
+ * event base model - storing information of a certain event
+ */
 type Event struct {
-	ID        uint       `jsonapi:"primary,event" gorm:"primary_key"`
+	ID        uint       `jsonapi:"primary,event" gorm:"primarykey"`
 	Title     *string    `jsonapi:"attr,title" gorm:"not null"`
 	TimeBegin *time.Time `jsonapi:"attr,time_begin,iso8601" gorm:"not null"`
 	TimeEnd   *time.Time `jsonapi:"attr,time_end,iso8601" gorm:"not null"`
@@ -69,4 +72,17 @@ type PhysicalLocation struct {
 	Address  string `json:"address"`
 	Building string `json:"building"`
 	Unit     string `json:"unit"`
+}
+
+/*
+ * Event signup model - store signup relation between an event and a user
+ */
+type EventSignup struct {
+	ID      uint   `jsonapi:"primary,eventSignup" gorm:"primarykey"`
+	EventID *uint  `gorm:"not null"`
+	Event   *Event `jsonapi:"relation,event"`
+	UserID  *uint  `gorm:"not null"`
+	User    *User  `jsonapi:"relation,user,omitempty"`
+
+	DBTime
 }

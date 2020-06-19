@@ -1,7 +1,7 @@
 package model
 
 type TelegramSubscription struct {
-	ID     uint   `gorm:"primary_key"`
+	ID     uint   `gorm:"primarykey"`
 	ChatID *int64 `gorm:"not null"`
 	UserID *uint  `gorm:"not null"`
 	User   *User

@@ -16,5 +16,5 @@ require (
 	github.com/technoweenie/multipartstreamer v1.0.1 // indirect
 	golang.org/x/net v0.0.0-20200602114024-627f9648deb9 // indirect
 	gorm.io/driver/mysql v0.0.0-20200602015408-0407d0c21cf0
-	gorm.io/gorm v0.2.5
+	gorm.io/gorm v0.2.9
 )

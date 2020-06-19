@@ -53,6 +53,8 @@ func main() {
 		{
 			eventRouter.POST("/", api.EventCreate)
 			eventRouter.GET("/:id", api.EventGet)
+			eventRouter.POST("/signup", api.EventSignupCreate)
+			eventRouter.DELETE("/signup/:id", api.EventSignupDelete)
 		}
 	}
 

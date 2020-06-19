@@ -36,7 +36,7 @@ func CreateToken(ctx *gin.Context) {
 			viper.GetBool("openid.associationMode"),
 			viper.GetBool("openid.doubleVerification")); err == nil {
 			token.AuthURL = url
-			ctx.Writer.WriteHeader(http.StatusCreated)
+			ctx.Status(http.StatusCreated)
 			if err := jsonapi.MarshalPayload(ctx.Writer, &token); err != nil {
 				misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
 			}

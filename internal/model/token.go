@@ -3,7 +3,7 @@ package model
 import "github.com/google/jsonapi"
 
 type Token struct {
-	ID     uint    `jsonapi:"primary,token" gorm:"primary_key" header:"X-Token-ID" binding:"required"`
+	ID     uint    `jsonapi:"primary,token" gorm:"primarykey" header:"X-Token-ID" binding:"required"`
 	Secret *string `jsonapi:"attr,secret" gorm:"not null" header:"X-Token-Secret" binding:"required"`
 	// Status codes:
 	// - created : newly created, not linked to any NUSID

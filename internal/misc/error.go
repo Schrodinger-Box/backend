@@ -9,7 +9,7 @@ import (
 )
 
 func ReturnError(ctx *gin.Context, status int, title string, code string, detail string) {
-	ctx.Writer.WriteHeader(status)
+	ctx.Status(status)
 	if err := jsonapi.MarshalErrors(ctx.Writer, []*jsonapi.ErrorObject{{
 		Title:  title,
 		Code:   code,
