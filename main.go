@@ -4,10 +4,14 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/gin-gonic/gin"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/robfig/cron/v3"
 	"github.com/spf13/viper"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 
 	"schrodinger-box/internal/api"
 	"schrodinger-box/internal/callback"
@@ -30,10 +34,39 @@ func main() {
 		panic(fmt.Errorf("Fatal error config file: %s \n", err))
 	}
 
-	connString := viper.GetString("database")
+	// load essential interfaces (Telegram bot API, database)
+	// Telegram Bot API
+	bot, err := tgbotapi.NewBotAPI(viper.GetString("api.telegram.key"))
+	if err != nil {
+		panic("Failed to connect to Telegram bot API: " + err.Error())
+	} else {
+		bot.Debug = false
+		debugPrint("Authorized on account %s", bot.Self.UserName)
+	}
+	// database
+	db, err := gorm.Open(mysql.Open(viper.GetString("database")), &gorm.Config{})
+	if err != nil {
+		panic("Fail to connect to DB: " + err.Error())
+	} else {
+		debugPrint("Database connected")
+	}
+	tables := []interface{}{
+		model.Token{},
+		model.User{},
+		model.Event{},
+		model.EventSignup{},
+		model.TelegramSubscription{},
+	}
+	if err := db.AutoMigrate(tables...); err != nil {
+		panic("Failed to migrate tables: " + err.Error())
+	} else {
+		debugPrint("Database migrated")
+	}
+
 	router := gin.Default()
+	router.LoadHTMLGlob("templates/*")
 	router.Use(gin.Recovery())
-	router.Use(middleware.DatabaseMiddleware(connString))
+	router.Use(middleware.DatabaseMiddleware(db))
 
 	// router group dealing with all API calls from front end
 	apiRouter := router.Group("/api")
@@ -67,11 +100,10 @@ func main() {
 	router.GET("/ping", printPing)
 
 	c := cron.New()
-
 	// telegram updates handler
-	go telegram.Loop(connString)
+	go telegram.Loop(db, bot)
 	// telegram event scheduler
-	c.AddFunc(viper.GetString("api.telegram.cron"), func() { telegram.Cron(connString) })
+	c.AddFunc(viper.GetString("api.telegram.cron"), func() { telegram.Cron(db, bot) })
 
 	c.Start()
 	// listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
@@ -91,4 +123,15 @@ func printToken(ctx *gin.Context) {
 
 func printPing(ctx *gin.Context) {
 	ctx.String(http.StatusOK, "pong")
+}
+
+// this function prints a line of debug information to the default IO writer
+// debugging status and DefaultWriter are inherited from gin
+func debugPrint(format string, values ...interface{}) {
+	if gin.IsDebugging() {
+		if !strings.HasSuffix(format, "\n") {
+			format += "\n"
+		}
+		fmt.Fprintf(gin.DefaultWriter, "[Schrodinger's Box] "+format, values...)
+	}
 }

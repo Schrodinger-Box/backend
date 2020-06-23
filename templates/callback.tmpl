@@ -1,0 +1,22 @@
+{{ define "callback.tmpl" }}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>Authenticated, redirecting...</title>
+    <meta name="author" content="Schrodinger's Box">
+    <meta name="description" content="Authenticated and saving login token to local machine">
+</head>
+
+<body>
+<script>
+    tokenTag = "auth_token"
+    token = JSON.parse(localStorage.getItem(tokenTag))
+    token.attributes.status = "active"
+    localStorage.setItem(tokenTag, JSON.stringify(token))
+</script>
+</body>
+
+</html>
+{{ end }}

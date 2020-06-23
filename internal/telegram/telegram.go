@@ -2,15 +2,9 @@ package telegram
 
 import (
 	"errors"
-	"fmt"
-	"log"
 	"strconv"
-	"strings"
 
-	"github.com/gin-gonic/gin"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
-	"github.com/spf13/viper"
-	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 
 	"schrodinger-box/internal/model"
@@ -27,24 +21,11 @@ const (
 )
 
 // this function handles updates received from the bot API
-func Loop(connString string) {
-	bot, err := tgbotapi.NewBotAPI(viper.GetString("api.telegram.key"))
-	if err != nil {
-		log.Panic(err)
-	} else {
-		bot.Debug = false
-		debugPrint("Loop - Authorized on account %s", bot.Self.UserName)
-	}
-
-	db, err := gorm.Open(mysql.Open(connString), &gorm.Config{})
-	if err != nil {
-		panic("Fail to connect to DB: " + err.Error())
-	}
-
+func Loop(db *gorm.DB, bot *tgbotapi.BotAPI) {
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
 
-	updates, err := bot.GetUpdatesChan(u)
+	updates, _ := bot.GetUpdatesChan(u)
 
 	actionCache := make(map[int64]string)
 	dataCache := make(map[int64]interface{})
@@ -132,24 +113,11 @@ func Loop(connString string) {
 		}
 
 		bot.Send(msg)
-		debugPrint("[%s] %s <- %s", update.Message.From.UserName, update.Message.Text, msg.Text)
 	}
 }
 
-func Cron(connString string) {
+func Cron(db *gorm.DB, bot *tgbotapi.BotAPI) {
 	// TODO: do some scheduled jobs (for example, sending reminders to users)
-	bot, err := tgbotapi.NewBotAPI(viper.GetString("api.telegram.key"))
-	if err != nil {
-		log.Panic(err)
-	} else {
-		bot.Debug = false
-		debugPrint("Cron - Authorized on account %s", bot.Self.UserName)
-	}
-
-	db, err := gorm.Open(mysql.Open(connString), &gorm.Config{})
-	if err != nil {
-		panic("Fail to connect to DB: " + err.Error())
-	}
 	var subscriptions []model.TelegramSubscription
 	db.Find(&subscriptions)
 	for _, subscription := range subscriptions {
@@ -162,17 +130,6 @@ func Cron(connString string) {
 	}
 	// this sends a debug information to all users with debug flag enabled
 
-}
-
-// this function prints a line of debug information to the default IO writer
-// debugging status and DefaultWriter are inherited from gin
-func debugPrint(format string, values ...interface{}) {
-	if gin.IsDebugging() {
-		if !strings.HasSuffix(format, "\n") {
-			format += "\n"
-		}
-		fmt.Fprintf(gin.DefaultWriter, "[Telegram API] "+format, values...)
-	}
 }
 
 func sendMessage(bot *tgbotapi.BotAPI, chatId int64, message string) (tgbotapi.Message, error) {

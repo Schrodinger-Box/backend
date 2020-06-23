@@ -2,28 +2,10 @@ package middleware
 
 import (
 	"github.com/gin-gonic/gin"
-	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
-
-	"schrodinger-box/internal/model"
 )
 
-func DatabaseMiddleware(connString string) gin.HandlerFunc {
-	db, err := gorm.Open(mysql.Open(connString), &gorm.Config{})
-	if err != nil {
-		panic("Fail to connect to DB: " + err.Error())
-	}
-
-	// Migrating table
-	tables := []interface{}{
-		model.Token{},
-		model.User{},
-		model.Event{},
-		model.EventSignup{},
-		model.TelegramSubscription{},
-	}
-	db.AutoMigrate(tables...)
-
+func DatabaseMiddleware(db *gorm.DB) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		ctx.Set("DB", db)
 		ctx.Next()
