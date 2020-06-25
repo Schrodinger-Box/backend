@@ -3,7 +3,10 @@
 # Any modifications to this file will not be effective until the program is restarted
 # Please copy the sample file and rename it as schrodinger-box.yaml before you do any edits
 
-database: "dev:dev@/schrodinger-box?charset=utf8mb4&parseTime=True&loc=Local"
+# this sets everything (tgbotapi, gorm, gin etc.) to debug mode if true
+debug: true
+# mysql is used by default
+database: "db_user:db_password@tcp(db_host:3306)/db_name?charset=utf8mb4&parseTime=True&loc=Local"
 # domain field MUST NOT have the slash at the end
 domain: "http://127.0.0.1:8080"
 openid:
@@ -11,9 +14,12 @@ openid:
   associationMode: true
   # whether to verify callback with the OP server WHEN ASSOCIATION MODE IS ON
   doubleVerification: false
-api:
+external:
   telegram:
     # the bot's authorization token
     key: "1140803138:SomethingSomething"
     # default cron interval is 1 execution per minute
     cron: "* * * * *"
+cors:
+  # defines Access-Control-Allow-Origin header returned for API requests
+  origin: "*"

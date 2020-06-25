@@ -34,13 +34,20 @@ func main() {
 		panic(fmt.Errorf("Fatal error config file: %s \n", err))
 	}
 
+	// set debug mode for gin
+	if viper.GetBool("debug") {
+		gin.SetMode(gin.DebugMode)
+	} else {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
 	// load essential interfaces (Telegram bot API, database)
 	// Telegram Bot API
-	bot, err := tgbotapi.NewBotAPI(viper.GetString("api.telegram.key"))
+	bot, err := tgbotapi.NewBotAPI(viper.GetString("external.telegram.key"))
 	if err != nil {
 		panic("Failed to connect to Telegram bot API: " + err.Error())
 	} else {
-		bot.Debug = false
+		bot.Debug = viper.GetBool("debug")
 		debugPrint("Authorized on account %s", bot.Self.UserName)
 	}
 	// database
@@ -49,6 +56,9 @@ func main() {
 		panic("Fail to connect to DB: " + err.Error())
 	} else {
 		debugPrint("Database connected")
+	}
+	if viper.GetBool("debug") {
+		db = db.Debug()
 	}
 	tables := []interface{}{
 		model.Token{},

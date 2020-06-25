@@ -2,7 +2,6 @@ package api
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/Schrodinger-Box/openid-go"
@@ -25,7 +24,7 @@ func CreateToken(ctx *gin.Context) {
 	token := model.Token{
 		Secret: &secret,
 	}
-	if db.Save(&token).Error == nil {
+	if err := db.Save(&token).Error; err == nil {
 		openid.SetSregFields(map[string]bool{
 			"email":    false,
 			"fullname": false,
@@ -41,10 +40,9 @@ func CreateToken(ctx *gin.Context) {
 				misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
 			}
 		} else {
-			log.Print(err)
-			// TODO error handling
+			misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
 		}
 	} else {
-		// TODO error handling (db)
+		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
 	}
 }
