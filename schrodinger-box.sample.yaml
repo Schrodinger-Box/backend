@@ -9,6 +9,7 @@ debug: true
 database: "db_user:db_password@tcp(db_host:3306)/db_name?charset=utf8mb4&parseTime=True&loc=Local"
 # domain field MUST NOT have the slash at the end
 domain: "http://127.0.0.1:8080"
+apiRoot: "/api"
 openid:
   # whether to use association mode or not
   associationMode: true

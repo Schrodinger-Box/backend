@@ -83,7 +83,7 @@ func main() {
 	router.Use(middleware.DatabaseMiddleware(db))
 
 	// router group dealing with all API calls from front end
-	apiRouter := router.Group("/api")
+	apiRouter := router.Group(viper.GetString("apiRoot"))
 	apiRouter.Use(middleware.APIMiddleware())
 	{
 		apiRouter.GET("/uptime", uptime)
@@ -108,6 +108,8 @@ func main() {
 			eventRouter.POST("/signup", api.EventSignupCreate)
 			eventRouter.DELETE("/signup/:id", api.EventSignupDelete)
 		}
+
+		apiRouter.GET("/events", middleware.TokenMiddleware(), api.EventsGet)
 	}
 
 	callbackRouter := router.Group("/callback")
@@ -140,7 +142,7 @@ func printToken(ctx *gin.Context) {
 }
 
 func uptime(ctx *gin.Context) {
-	ctx.String(http.StatusOK, "{\"meta\":{\"uptime\": \"" + fmt.Sprintf("%s", time.Since(startTime)) + "\"}}")
+	ctx.String(http.StatusOK, "{\"meta\":{\"uptime\": \""+fmt.Sprintf("%s", time.Since(startTime))+"\"}}")
 }
 
 // this function prints a line of debug information to the default IO writer

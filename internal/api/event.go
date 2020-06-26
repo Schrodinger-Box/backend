@@ -1,14 +1,18 @@
 package api
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"reflect"
+	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/jsonapi"
 	"github.com/mitchellh/mapstructure"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"schrodinger-box/internal/misc"
 	"schrodinger-box/internal/model"
@@ -76,7 +80,7 @@ func EventGet(ctx *gin.Context) {
 	id := ctx.Param("id")
 	event := &model.Event{}
 	db := ctx.MustGet("DB").(*gorm.DB)
-	if err := db.Preload("Organizer").First(event, id).Error; errors.Is(err, gorm.ErrRecordNotFound) {
+	if err := db.Preload(clause.Associations).First(event, id).Error; errors.Is(err, gorm.ErrRecordNotFound) {
 		misc.ReturnStandardError(ctx, http.StatusNotFound, "event does not exist")
 		return
 	} else if err != nil {
@@ -157,5 +161,74 @@ func EventSignupDelete(ctx *gin.Context) {
 		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
 	} else {
 		ctx.Status(http.StatusNoContent)
+	}
+}
+
+/*
+ * Handlers for returning multiple events (sorting, pagination)
+ */
+
+func EventsGet(ctx *gin.Context) {
+	// as per JSON:API specification v1.0, -id means sorting by id in descending order
+	sortQuery := ctx.DefaultQuery("sort", "-id")
+	offset, _ := strconv.Atoi(ctx.DefaultQuery("offset", "0"))
+	size, _ := strconv.Atoi(ctx.DefaultQuery("size", "5"))
+
+	// convert JSON:API sort query to SQL sorting syntax
+	sortSlice := strings.Split(sortQuery, ",")
+	for k, v := range sortSlice {
+		if string(v[0]) == "-" {
+			sortSlice[k] = v[1:] + " desc"
+		} else {
+			sortSlice[k] = v + " asc"
+		}
+	}
+	sort := strings.Join(sortSlice, ",")
+
+	db := ctx.MustGet("DB").(*gorm.DB)
+	var events []*model.Event
+
+	if err := db.Preload(clause.Associations).Limit(size).Offset(offset).Order(sort).Find(&events).Error; err == nil {
+		for _, event := range events {
+			event.LoadLocation()
+			event.LoadSignups(db)
+		}
+		ctx.Status(http.StatusOK)
+		var jsonString strings.Builder
+		var jsonData map[string]interface{}
+		var count int64
+		var next, prev *string
+		if err := jsonapi.MarshalPayload(&jsonString, events); err == nil {
+			json.Unmarshal([]byte(jsonString.String()), &jsonData)
+			url := misc.APIAbsolutePath("/events") + "?sort=" + sortQuery + "&size=" + strconv.Itoa(size) + "&offset="
+			db.Model(&events).Count(&count)
+			firstString := url + "0"
+			lastString := url + url + strconv.Itoa(int(count)/size*size)
+			if offset+size >= int(count) {
+				// already at last page
+				next = nil
+			} else {
+				nextString := url + strconv.Itoa(offset+size)
+				next = &nextString
+			}
+			if offset-size < 0 {
+				// already at first page
+				prev = nil
+			} else {
+				prevString := url + strconv.Itoa(offset-size)
+				prev = &prevString
+			}
+			jsonData["links"] = map[string]*string{
+				jsonapi.KeyFirstPage:    &firstString,
+				jsonapi.KeyLastPage:     &lastString,
+				jsonapi.KeyNextPage:     next,
+				jsonapi.KeyPreviousPage: prev,
+			}
+			json.NewEncoder(ctx.Writer).Encode(jsonData)
+		} else {
+			misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
+		}
+	} else {
+		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
 	}
 }

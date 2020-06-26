@@ -9,6 +9,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 	"gorm.io/gorm"
+
+	"schrodinger-box/internal/misc"
 )
 
 /*
@@ -40,7 +42,7 @@ func (event *Event) JSONAPILinks() *jsonapi.Links {
 func (event *Event) JSONAPIRelationshipLinks(relation string) *jsonapi.Links {
 	if relation == "organizer" {
 		return &jsonapi.Links{
-			"related": viper.GetString("domain") + "/api/user/" + fmt.Sprint(event.OrganizerID),
+			"related": misc.APIAbsolutePath("/user/" + fmt.Sprint(event.OrganizerID)),
 		}
 	}
 	return nil
@@ -83,9 +85,9 @@ type PhysicalLocation struct {
 type EventSignup struct {
 	ID      uint   `jsonapi:"primary,event_signup" gorm:"primarykey"`
 	EventID *uint  `gorm:"not null"`
-	Event   *Event `jsonapi:"relation,event,omitempty"`
+	Event   *Event `jsonapi:"relation,event,omitempty" gorm:"PRELOAD:false"`
 	UserID  *uint  `gorm:"not null"`
-	User    *User  `jsonapi:"relation,user,omitempty"`
+	User    *User  `jsonapi:"relation,user,omitempty" gorm:"PRELOAD:false"`
 
 	DBTime
 }
