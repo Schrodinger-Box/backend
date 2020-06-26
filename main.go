@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
@@ -20,7 +21,10 @@ import (
 	"schrodinger-box/internal/telegram"
 )
 
+var startTime time.Time
+
 func main() {
+	startTime = time.Now()
 	gin.ForceConsoleColor()
 
 	viper.SetConfigName("schrodinger-box.yaml")
@@ -82,6 +86,8 @@ func main() {
 	apiRouter := router.Group("/api")
 	apiRouter.Use(middleware.APIMiddleware())
 	{
+		apiRouter.GET("/uptime", uptime)
+
 		apiRouter.POST("/token", api.TokenCreate)
 		apiRouter.GET("/token", middleware.TokenMiddleware(), api.TokenGet)
 
@@ -110,7 +116,6 @@ func main() {
 	}
 
 	router.GET("/print_token", middleware.TokenMiddleware(), printToken)
-	router.GET("/ping", printPing)
 
 	c := cron.New()
 	// telegram updates handler
@@ -134,8 +139,8 @@ func printToken(ctx *gin.Context) {
 	ctx.String(http.StatusOK, "Your Token ID is: %d;\nYour Token Secret is: %s", token.ID, *token.Secret)
 }
 
-func printPing(ctx *gin.Context) {
-	ctx.String(http.StatusOK, "pong")
+func uptime(ctx *gin.Context) {
+	ctx.String(http.StatusOK, "{\"meta\":{\"uptime\": \"" + fmt.Sprintf("%s", time.Since(startTime)) + "\"}}")
 }
 
 // this function prints a line of debug information to the default IO writer
