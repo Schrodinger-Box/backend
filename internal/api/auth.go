@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -48,9 +49,21 @@ func TokenCreate(ctx *gin.Context) {
 }
 
 func TokenGet(ctx *gin.Context) {
-	token := ctx.MustGet("Token").(*model.Token)
+	token := model.Token{}
+	if err := ctx.ShouldBindHeader(&token); err != nil {
+		misc.ReturnStandardError(ctx, 401, "token missing")
+		return
+	}
+	db := ctx.MustGet("DB").(*gorm.DB)
+	if err := db.Where(&token).First(&token).Error; errors.Is(err, gorm.ErrRecordNotFound) {
+		misc.ReturnStandardError(ctx, 401, "token information invalid")
+		return
+	} else if err != nil {
+		misc.ReturnStandardError(ctx, 500, err.Error())
+		return
+	}
 	ctx.Status(http.StatusOK)
-	if err := jsonapi.MarshalPayload(ctx.Writer, token); err != nil {
+	if err := jsonapi.MarshalPayload(ctx.Writer, &token); err != nil {
 		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
 	}
 }

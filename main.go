@@ -90,7 +90,7 @@ func main() {
 		apiRouter.GET("/uptime", uptime)
 
 		apiRouter.POST("/token", api.TokenCreate)
-		apiRouter.GET("/token", middleware.TokenMiddleware(), api.TokenGet)
+		apiRouter.GET("/token", api.TokenGet)
 
 		userRouter := apiRouter.Group("/user")
 		userRouter.Use(middleware.TokenMiddleware())
