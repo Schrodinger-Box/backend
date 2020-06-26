@@ -82,7 +82,9 @@ func main() {
 	apiRouter := router.Group("/api")
 	apiRouter.Use(middleware.APIMiddleware())
 	{
-		apiRouter.POST("/token", api.CreateToken)
+		apiRouter.POST("/token", api.TokenCreate)
+		apiRouter.GET("/token", middleware.TokenMiddleware(), api.TokenGet)
+
 		userRouter := apiRouter.Group("/user")
 		userRouter.Use(middleware.TokenMiddleware())
 		{
@@ -91,6 +93,7 @@ func main() {
 			userRouter.PATCH("/", api.UserUpdate)
 			userRouter.GET("/:id", api.UserGet)
 		}
+
 		eventRouter := apiRouter.Group("/event")
 		eventRouter.Use(middleware.TokenMiddleware())
 		{

@@ -88,6 +88,7 @@ func EventGet(ctx *gin.Context) {
 		return
 	}
 	ctx.Status(http.StatusOK)
+	event.LoadSignups(db)
 	if err := jsonapi.MarshalPayload(ctx.Writer, event); err != nil {
 		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
 		return

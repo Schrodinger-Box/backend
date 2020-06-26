@@ -18,7 +18,7 @@ import (
 // This file contains methods handling authentication and authorization
 
 // This method receives Basic HTTP authentication and return a token when credentials are valid
-func CreateToken(ctx *gin.Context) {
+func TokenCreate(ctx *gin.Context) {
 	db := ctx.MustGet("DB").(*gorm.DB)
 	secret := uuid.New().String()
 	token := model.Token{
@@ -43,6 +43,14 @@ func CreateToken(ctx *gin.Context) {
 			misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
 		}
 	} else {
+		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
+	}
+}
+
+func TokenGet(ctx *gin.Context) {
+	token := ctx.MustGet("Token").(*model.Token)
+	ctx.Status(http.StatusOK)
+	if err := jsonapi.MarshalPayload(ctx.Writer, token); err != nil {
 		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
 	}
 }

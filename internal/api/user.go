@@ -13,14 +13,16 @@ import (
 )
 
 func UserGetSelf(ctx *gin.Context) {
-	user, exists := ctx.Get("User")
+	userInterface, exists := ctx.Get("User")
 	if !exists {
 		// User has not been created, return 404 to tell client to create user
 		misc.ReturnStandardError(ctx, 404, "user has not been created")
 		return
 	}
+	user := userInterface.(*model.User)
 	ctx.Status(http.StatusOK)
-	if err := jsonapi.MarshalPayload(ctx.Writer, user.(*model.User)); err != nil {
+	user.LoadSignups(ctx.MustGet("DB").(*gorm.DB))
+	if err := jsonapi.MarshalPayload(ctx.Writer, user); err != nil {
 		http.Error(ctx.Writer, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -75,6 +77,7 @@ func UserGet(ctx *gin.Context) {
 		}
 	}
 	ctx.Status(http.StatusOK)
+	user.LoadSignups(db)
 	if err := jsonapi.MarshalPayload(ctx.Writer, user); err != nil {
 		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
 		return

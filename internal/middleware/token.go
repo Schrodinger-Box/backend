@@ -38,6 +38,10 @@ func TokenMiddleware() gin.HandlerFunc {
 				// There is something wrong other than RecordNotFound (RNF means user has not been created)
 				misc.ReturnStandardError(ctx, 500, err.Error())
 				return
+			} else {
+				// token active, but no related user can be retrieved from it
+				misc.ReturnStandardError(ctx, 500, "user linked to this token cannot be retrieved")
+				return
 			}
 		} else {
 			misc.ReturnStandardError(ctx, http.StatusUnauthorized, "token is not active")

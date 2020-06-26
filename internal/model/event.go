@@ -8,6 +8,7 @@ import (
 	"github.com/google/jsonapi"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
+	"gorm.io/gorm"
 )
 
 /*
@@ -23,8 +24,10 @@ type Event struct {
 	Location     interface{} `jsonapi:"attr,location" gorm:"-"`
 	Type         *string     `jsonapi:"attr,type" gorm:"not null"`
 
-	OrganizerID uint
-	Organizer   *User `jsonapi:"relation,organizer,omitempty"`
+	OrganizerID  uint
+	Organizer    *User          `jsonapi:"relation,organizer,omitempty"`
+	EventSignups []*EventSignup `jsonapi:"relation,event_signups,omitempty"`
+
 	DBTime
 }
 
@@ -78,11 +81,16 @@ type PhysicalLocation struct {
  * Event signup model - store signup relation between an event and a user
  */
 type EventSignup struct {
-	ID      uint   `jsonapi:"primary,eventSignup" gorm:"primarykey"`
+	ID      uint   `jsonapi:"primary,event_signup" gorm:"primarykey"`
 	EventID *uint  `gorm:"not null"`
-	Event   *Event `jsonapi:"relation,event"`
+	Event   *Event `jsonapi:"relation,event,omitempty"`
 	UserID  *uint  `gorm:"not null"`
 	User    *User  `jsonapi:"relation,user,omitempty"`
 
 	DBTime
+}
+
+func (event *Event) LoadSignups(db *gorm.DB) {
+	// load all users who signed up this event with all their data side-loaded
+	db.Model(event).Preload("User").Association("EventSignups").Find(&event.EventSignups)
 }
