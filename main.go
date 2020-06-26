@@ -80,6 +80,7 @@ func main() {
 	router := gin.Default()
 	router.LoadHTMLGlob("templates/*")
 	router.Use(gin.Recovery())
+	router.Use(middleware.OptionsMiddleware)
 	router.Use(middleware.DatabaseMiddleware(db))
 
 	// router group dealing with all API calls from front end
