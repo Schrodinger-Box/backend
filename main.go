@@ -85,7 +85,7 @@ func main() {
 
 	// router group dealing with all API calls from front end
 	apiRouter := router.Group(viper.GetString("apiRoot"))
-	apiRouter.Use(middleware.APIMiddleware())
+	apiRouter.Use(middleware.APIMiddleware)
 	{
 		apiRouter.GET("/uptime", uptime)
 
@@ -95,16 +95,16 @@ func main() {
 		userRouter := apiRouter.Group("/user")
 		userRouter.Use(middleware.TokenMiddleware())
 		{
-			userRouter.GET("/", api.UserGetSelf)
-			userRouter.POST("/", api.UserCreate)
-			userRouter.PATCH("/", api.UserUpdate)
+			userRouter.GET("", api.UserGetSelf)
+			userRouter.POST("", api.UserCreate)
+			userRouter.PATCH("", api.UserUpdate)
 			userRouter.GET("/:id", api.UserGet)
 		}
 
 		eventRouter := apiRouter.Group("/event")
 		eventRouter.Use(middleware.TokenMiddleware())
 		{
-			eventRouter.POST("/", api.EventCreate)
+			eventRouter.POST("", api.EventCreate)
 			eventRouter.GET("/:id", api.EventGet)
 			eventRouter.POST("/signup", api.EventSignupCreate)
 			eventRouter.DELETE("/signup/:id", api.EventSignupDelete)

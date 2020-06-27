@@ -6,9 +6,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-func APIMiddleware() gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		ctx.Header("Content-Type", jsonapi.MediaType)
-		ctx.Header("Access-Control-Allow-Origin", viper.GetString("cors.origin"))
-	}
+func APIMiddleware(ctx *gin.Context) {
+	ctx.Header("Content-Type", jsonapi.MediaType)
+	ctx.Header("Access-Control-Allow-Origin", viper.GetString("cors.origin"))
 }
