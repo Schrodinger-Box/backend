@@ -24,3 +24,6 @@ external:
 cors:
   # defines Access-Control-Allow-Origin header returned for API requests
   origin: "*"
+azure:
+  accountName: "schrodingerbox"
+  accountKey: "SomeValidAccessKey=="

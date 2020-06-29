@@ -70,6 +70,7 @@ func main() {
 		model.Event{},
 		model.EventSignup{},
 		model.TelegramSubscription{},
+		model.File{},
 	}
 	if err := db.AutoMigrate(tables...); err != nil {
 		panic("Failed to migrate tables: " + err.Error())
@@ -111,6 +112,9 @@ func main() {
 		}
 
 		apiRouter.GET("/events", middleware.TokenMiddleware(), api.EventsGet)
+
+		apiRouter.POST("/file", middleware.TokenMiddleware(), api.FileCreate)
+		apiRouter.GET("/files", middleware.TokenMiddleware(), api.FilesGet)
 	}
 
 	callbackRouter := router.Group("/callback")

@@ -6,6 +6,8 @@ publicizing platform targeting students and event organizers within NUS.
 This app is still in early stage of development. All APIs provided by this
 backend server complies with [JSON:API Specification v1.0](https://jsonapi.org/format/1.0/).
 
+[![Build Status](https://travis-ci.com/Schrodinger-Box/backend.svg?branch=master)](https://travis-ci.com/Schrodinger-Box/backend)
+
 ## API documentation
 API specification for this app is written in [OpenAPI Specification (Version 3.0.3)](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.3.md).
 Same as this backend server, it is still in early stage.

@@ -3,6 +3,7 @@ module schrodinger-box
 go 1.14
 
 require (
+	github.com/Azure/azure-storage-blob-go v0.10.0
 	github.com/Schrodinger-Box/gormid v0.0.0-20200627084402-650a6798b83b
 	github.com/Schrodinger-Box/openid-go v1.0.2-0.20200625063644-4dcafb84a6bc
 	github.com/gin-gonic/gin v1.6.3

@@ -1,0 +1,14 @@
+sudo: false
+
+language: go
+
+go:
+  - 1.14.x
+
+env:
+  - GO111MODULE=on
+
+# Get deps, build, test, and ensure the code is gofmt'ed.
+script:
+  - go test -v ./...
+  - diff -u <(echo -n) <(gofmt -d -s .)
