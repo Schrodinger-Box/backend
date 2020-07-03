@@ -58,11 +58,7 @@ func EventCreate(ctx *gin.Context) {
 		misc.ReturnStandardError(ctx, http.StatusBadRequest, "illegal online location")
 		return
 	}
-	event.OrganizerID = user.ID
-	if err := event.SaveLocation(); err != nil {
-		misc.ReturnStandardError(ctx, http.StatusBadRequest, "cannot marshal location object into JSON")
-		return
-	}
+	event.OrganizerID = &user.ID
 	event.Organizer = user
 	db := ctx.MustGet("DB").(*gorm.DB)
 	if err := db.Save(event).Error; err != nil {
@@ -87,15 +83,34 @@ func EventGet(ctx *gin.Context) {
 		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
 		return
 	}
-	if err := event.LoadLocation(); err != nil {
-		misc.ReturnStandardError(ctx, http.StatusInternalServerError, "unable to decode event location: "+err.Error())
-		return
-	}
 	ctx.Status(http.StatusOK)
-	event.LoadSignups(db)
 	if err := jsonapi.MarshalPayload(ctx.Writer, event); err != nil {
 		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
 		return
+	}
+}
+
+func EventDelete(ctx *gin.Context) {
+	var user *model.User
+	if userInterface, exists := ctx.Get("User"); !exists {
+		misc.ReturnStandardError(ctx, http.StatusForbidden, "you have to be a registered user to delete signup record")
+		return
+	} else {
+		user = userInterface.(*model.User)
+	}
+	id := ctx.Param("id")
+	event := &model.Event{}
+	db := ctx.MustGet("DB").(*gorm.DB)
+	if err := db.Preload(clause.Associations).First(event, id).Error; errors.Is(err, gorm.ErrRecordNotFound) {
+		misc.ReturnStandardError(ctx, http.StatusNotFound, "event does not exist")
+	} else if err != nil {
+		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
+	} else if *event.OrganizerID != user.ID {
+		misc.ReturnStandardError(ctx, http.StatusForbidden, "you can only delete event organized by your own")
+	} else if err := db.Delete(&event).Error; err != nil {
+		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
+	} else {
+		ctx.Status(http.StatusNoContent)
 	}
 }
 
@@ -115,6 +130,9 @@ func EventSignupCreate(ctx *gin.Context) {
 	if err := jsonapi.UnmarshalPayload(ctx.Request.Body, eventSignup); err != nil {
 		misc.ReturnStandardError(ctx, http.StatusBadRequest, "cannot unmarshal JSON of request")
 		return
+	} else if eventSignup.Event == nil || eventSignup.Event.ID <= 0 {
+		misc.ReturnStandardError(ctx, http.StatusBadRequest, "invalid event ID")
+		return
 	}
 	db := ctx.MustGet("DB").(*gorm.DB)
 	event := model.Event{}
@@ -125,7 +143,6 @@ func EventSignupCreate(ctx *gin.Context) {
 		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
 		return
 	}
-	event.LoadLocation()
 	eventSignup.EventID = &event.ID
 	eventSignup.Event = &event
 	eventSignup.UserID = &user.ID
@@ -155,7 +172,7 @@ func EventSignupDelete(ctx *gin.Context) {
 		misc.ReturnStandardError(ctx, http.StatusNotFound, "event signup record does not exist")
 	} else if err != nil {
 		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
-	} else if eventSignup.User.ID != user.ID {
+	} else if *eventSignup.UserID != user.ID {
 		misc.ReturnStandardError(ctx, http.StatusForbidden, "you can only delete your own signup record")
 	} else if err := db.Delete(&eventSignup).Error; err != nil {
 		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
@@ -189,10 +206,6 @@ func EventsGet(ctx *gin.Context) {
 	var events []*model.Event
 
 	if err := db.Preload(clause.Associations).Limit(size).Offset(offset).Order(sort).Find(&events).Error; err == nil {
-		for _, event := range events {
-			event.LoadLocation()
-			event.LoadSignups(db)
-		}
 		ctx.Status(http.StatusOK)
 		var jsonString strings.Builder
 		var jsonData map[string]interface{}

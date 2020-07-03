@@ -21,7 +21,6 @@ func UserGetSelf(ctx *gin.Context) {
 	}
 	user := userInterface.(*model.User)
 	ctx.Status(http.StatusOK)
-	user.LoadSignups(ctx.MustGet("DB").(*gorm.DB))
 	if err := jsonapi.MarshalPayload(ctx.Writer, user); err != nil {
 		http.Error(ctx.Writer, err.Error(), http.StatusInternalServerError)
 	}
@@ -77,7 +76,6 @@ func UserGet(ctx *gin.Context) {
 		}
 	}
 	ctx.Status(http.StatusOK)
-	user.LoadSignups(db)
 	if err := jsonapi.MarshalPayload(ctx.Writer, user); err != nil {
 		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
 		return
@@ -117,5 +115,21 @@ func UserUpdate(ctx *gin.Context) {
 	if err := jsonapi.MarshalPayload(ctx.Writer, user); err != nil {
 		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
 		return
+	}
+}
+
+func UserDelete(ctx *gin.Context) {
+	var user *model.User
+	if userInterface, exists := ctx.Get("User"); !exists {
+		misc.ReturnStandardError(ctx, http.StatusForbidden, "you have to be a registered user to terminate yourself")
+		return
+	} else {
+		user = userInterface.(*model.User)
+	}
+	db := ctx.MustGet("DB").(*gorm.DB)
+	if err := db.Delete(&user).Error; err != nil {
+		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
+	} else {
+		ctx.Status(http.StatusNoContent)
 	}
 }

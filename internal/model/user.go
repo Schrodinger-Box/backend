@@ -25,10 +25,16 @@ func (user *User) JSONAPILinks() *jsonapi.Links {
 	}
 }
 
-func (user *User) LoadSignups(db *gorm.DB) {
+func (user *User) AfterFind(tx *gorm.DB) error {
 	// loading all events signed up by the user with event data side-loaded
-	db.Model(user).Preload("Event").Preload("Event.Organizer").Association("EventSignups").Find(&user.EventSignups)
-	for _, signup := range user.EventSignups {
-		signup.Event.LoadLocation()
+	return tx.Model(user).Preload("Event").Preload("Event.Organizer").Association("EventSignups").Find(&user.EventSignups)
+}
+
+func (user *User) AfterDelete(tx *gorm.DB) error {
+	// delete all linked event signup records
+	var eventSignups []*EventSignup
+	if err := tx.Model(user).Association("EventSignups").Find(&eventSignups); err != nil {
+		return err
 	}
+	return tx.Delete(&eventSignups).Error
 }

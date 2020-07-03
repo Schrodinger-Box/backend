@@ -26,7 +26,7 @@ type Event struct {
 	Location     interface{} `jsonapi:"attr,location" gorm:"-"`
 	Type         *string     `jsonapi:"attr,type" gorm:"not null"`
 
-	OrganizerID  uint
+	OrganizerID  *uint          `gorm:"not null"`
 	Organizer    *User          `jsonapi:"relation,organizer,omitempty"`
 	EventSignups []*EventSignup `jsonapi:"relation,event_signups,omitempty"`
 
@@ -42,24 +42,41 @@ func (event *Event) JSONAPILinks() *jsonapi.Links {
 func (event *Event) JSONAPIRelationshipLinks(relation string) *jsonapi.Links {
 	if relation == "organizer" {
 		return &jsonapi.Links{
-			"related": misc.APIAbsolutePath("/user/" + fmt.Sprint(event.OrganizerID)),
+			"related": misc.APIAbsolutePath("/user/" + fmt.Sprint(*event.OrganizerID)),
 		}
 	}
 	return nil
 }
 
-// Unmarshal LocationJSON into Location object
-func (event *Event) LoadLocation() error {
-	err := json.Unmarshal([]byte(*event.LocationJSON), &event.Location)
-	return errors.WithStack(err)
-}
-
-// Marshal Location object into LocationJSON
-func (event *Event) SaveLocation() error {
+func (event *Event) BeforeSave(tx *gorm.DB) error {
+	// Marshal Location object into LocationJSON
 	jsonByteSlice, err := json.Marshal(event.Location)
 	jsonString := string(jsonByteSlice)
 	event.LocationJSON = &jsonString
 	return errors.WithStack(err)
+}
+
+func (event *Event) AfterSave(tx *gorm.DB) error {
+	return event.AfterFind(tx)
+}
+
+func (event *Event) AfterFind(tx *gorm.DB) error {
+	// load all users who signed up this event with all their data side-loaded
+	if err := tx.Model(event).Preload("User").Association("EventSignups").Find(&event.EventSignups); err != nil {
+		return err
+	}
+	// Unmarshal LocationJSON into Location object
+	err := json.Unmarshal([]byte(*event.LocationJSON), &event.Location)
+	return errors.WithStack(err)
+}
+
+func (event *Event) AfterDelete(tx *gorm.DB) error {
+	// delete all linked event signup records
+	var eventSignups []*EventSignup
+	if err := tx.Model(event).Association("EventSignups").Find(&eventSignups); err != nil {
+		return err
+	}
+	return tx.Delete(&eventSignups).Error
 }
 
 type OnlineLocation struct {
@@ -90,9 +107,4 @@ type EventSignup struct {
 	User    *User  `jsonapi:"relation,user,omitempty" gorm:"PRELOAD:false"`
 
 	DBTime
-}
-
-func (event *Event) LoadSignups(db *gorm.DB) {
-	// load all users who signed up this event with all their data side-loaded
-	db.Model(event).Preload("User").Association("EventSignups").Find(&event.EventSignups)
 }

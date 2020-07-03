@@ -99,6 +99,7 @@ func main() {
 			userRouter.GET("", api.UserGetSelf)
 			userRouter.POST("", api.UserCreate)
 			userRouter.PATCH("", api.UserUpdate)
+			userRouter.DELETE("", api.UserDelete)
 			userRouter.GET("/:id", api.UserGet)
 		}
 
@@ -107,8 +108,15 @@ func main() {
 		{
 			eventRouter.POST("", api.EventCreate)
 			eventRouter.GET("/:id", api.EventGet)
-			eventRouter.POST("/signup", api.EventSignupCreate)
-			eventRouter.DELETE("/signup/:id", api.EventSignupDelete)
+			eventRouter.DELETE("/:id", api.EventDelete)
+
+		}
+
+		eventSignupRouter := apiRouter.Group("/event_signup")
+		eventSignupRouter.Use(middleware.TokenMiddleware())
+		{
+			eventSignupRouter.POST("", api.EventSignupCreate)
+			eventSignupRouter.DELETE("/:id", api.EventSignupDelete)
 		}
 
 		apiRouter.GET("/events", middleware.TokenMiddleware(), api.EventsGet)
@@ -124,15 +132,16 @@ func main() {
 
 	router.GET("/print_token", middleware.TokenMiddleware(), printToken)
 
-	c := cron.New()
-	// telegram updates handler
-	go telegram.Loop(db, bot)
-	// telegram event scheduler
-	c.AddFunc(viper.GetString("api.telegram.cron"), func() { telegram.Cron(db, bot) })
+	if viper.GetBool("external.telegram.enable") {
+		c := cron.New()
+		// telegram updates handler
+		go telegram.Loop(db, bot)
+		// telegram event scheduler
+		c.AddFunc(viper.GetString("api.telegram.cron"), func() { telegram.Cron(db, bot) })
+		c.Start()
+	}
 
-	c.Start()
-	// listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
-	router.Run()
+	router.Run(viper.GetString("listen"))
 }
 
 func printToken(ctx *gin.Context) {
