@@ -24,17 +24,18 @@ var SharedKeyCredential *azblob.SharedKeyCredential
 // validity is 1 hour and 30 second gap is given to avoid problems of network delay
 const SASValidTime = 1 * time.Hour
 const SASValidAllowance = 30 * time.Second
+const DefaultType = "images"
 
-const ImageContainer = "images"
-const DefaultType = "image"
-
-var AllowedExtension = map[string]struct{}{
+var AllowedExtensions = map[string]struct{}{
 	"jpg":  {},
 	"jpeg": {},
 	"png":  {},
 	"webp": {},
 	"tiff": {},
 	"bmp":  {},
+}
+var FileTypes = map[string]string{
+	"images": "images",
 }
 
 // generate SAS for user to upload image to Azure Blob Storage
@@ -54,12 +55,15 @@ func FileCreate(ctx *gin.Context) {
 	} else if file.Filename == nil || file.Type == nil {
 		misc.ReturnStandardError(ctx, http.StatusBadRequest, "filename and type must be provided")
 		return
+	} else if _, ok := FileTypes[*file.Type]; !ok {
+		misc.ReturnStandardError(ctx, http.StatusBadRequest, "type '" + *file.Type + "' is not accepted")
+		return
 	}
 	// get file extension
 	fileNameSlice := strings.Split(*file.Filename, ".")
 	extension := fileNameSlice[len(fileNameSlice)-1]
-	if _, ok := AllowedExtension[extension]; !ok {
-		misc.ReturnStandardError(ctx, http.StatusBadRequest, "file extension is not accepted")
+	if _, ok := AllowedExtensions[extension]; !ok {
+		misc.ReturnStandardError(ctx, http.StatusBadRequest, "file extension '" + extension + "'is not accepted")
 		return
 	}
 	// standardize filename to uuid + extension
@@ -74,16 +78,17 @@ func FileCreate(ctx *gin.Context) {
 		return
 	}
 	expiresAt := time.Now().UTC().Add(SASValidTime)
-	qp, err := getSASQueryParam(expiresAt, ImageContainer, *file.Filename, azblob.BlobSASPermissions{Add: true}.String())
+	// we assign only create permission to this SAS (create permission does not allow updating resources)
+	qp, err := getSASQueryParam(expiresAt, FileTypes[*file.Type], *file.Filename, azblob.BlobSASPermissions{Create: true}.String())
 	if err != nil {
 		misc.ReturnStandardError(ctx, http.StatusBadRequest, "cannot save file record to database")
 		return
 	}
-	file.QueryParam = &qp
-	expiresAt = expiresAt.Add(-SASValidAllowance)
-	file.QueryParamExpiresAt = &expiresAt
+	file.QueryParam = qp
+	file.QueryParamExpiresAt = expiresAt.Add(-SASValidAllowance)
+	file.Endpoint = "https://" + viper.GetString("azure.accountName") + ".blob.core.windows.net/" + FileTypes[*file.Type] + "/" + newFilename
 	ctx.Status(http.StatusCreated)
-	if err := jsonapi.MarshalPayload(ctx.Writer, file); err != nil {
+	if err := jsonapi.MarshalPayloadWithoutIncluded(ctx.Writer, file); err != nil {
 		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -96,10 +101,15 @@ func FilesGet(ctx *gin.Context) {
 		misc.ReturnStandardError(ctx, 403, "you will have to be a registered user to do this")
 		return
 	}
+	fileType := ctx.DefaultQuery("type", DefaultType)
+	if _, ok := FileTypes[fileType]; !ok {
+		misc.ReturnStandardError(ctx, http.StatusBadRequest, "type '" + fileType + "' is not accepted")
+		return
+	}
 	if ReadSASExpiresAt == nil || time.Now().After(*ReadSASExpiresAt) {
 		// SAS token expires or have not been created at all, we need to generate a new one
 		newExpiresAt := time.Now().UTC().Add(SASValidTime)
-		qp, err := getSASQueryParam(newExpiresAt, ImageContainer, "",
+		qp, err := getSASQueryParam(newExpiresAt, FileTypes[fileType], "",
 			azblob.ContainerSASPermissions{Read: true}.String())
 		if err != nil {
 			misc.ReturnStandardError(ctx, 500, err.Error())
@@ -109,7 +119,14 @@ func FilesGet(ctx *gin.Context) {
 		newExpiresAt = newExpiresAt.Add(-SASValidAllowance)
 		ReadSASExpiresAt = &newExpiresAt
 	}
-	ctx.String(http.StatusOK, "{\"meta\":{\"qp\": \""+ReadSASQueryParam+"\", \"qp_expires_at\": \""+ReadSASExpiresAt.Format(time.RFC3339)+"\"}}")
+	data := map[string]map[string]string {
+		"meta": {
+			"qp": ReadSASQueryParam,
+			"qp_expires_at": ReadSASExpiresAt.Format(time.RFC3339),
+			"endpoint": "https://" + viper.GetString("azure.accountName") + ".blob.core.windows.net/" + FileTypes[fileType] + "/",
+		},
+	}
+	ctx.JSON(http.StatusOK, data)
 }
 
 func getSASQueryParam(expireTime time.Time, container string, blob string, permissions string) (string, error) {

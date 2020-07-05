@@ -21,15 +21,19 @@ type File struct {
 	Type   *string `jsonapi:"attr,type" gorm:"not null"`
 
 	// this is only returned when doing file.create and will not be logged in the database
-	QueryParam          *string    `jsonapi:"-" gorm:"-"`
-	QueryParamExpiresAt *time.Time `jsonapi:"-" gorm:"-"`
+	QueryParam          string    `jsonapi:"-" gorm:"-"`
+	QueryParamExpiresAt time.Time `jsonapi:"-" gorm:"-"`
+	Endpoint			string    `jsonapi:"-" gorm:"-"`
+
+	DBTime
 }
 
 func (file *File) JSONAPIMeta() *jsonapi.Meta {
-	if file.QueryParam != nil {
+	if file.QueryParam != "" {
 		return &jsonapi.Meta{
 			"qp":            file.QueryParam,
 			"qp_expires_at": file.QueryParamExpiresAt.Format(time.RFC3339),
+			"endpoint":      file.Endpoint,
 		}
 	} else {
 		return nil
