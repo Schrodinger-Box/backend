@@ -25,9 +25,9 @@ func (user *User) JSONAPILinks() *jsonapi.Links {
 	}
 }
 
-func (user *User) AfterFind(tx *gorm.DB) error {
+func (user *User) LoadSignups(db *gorm.DB) error {
 	// loading all events signed up by the user with event data side-loaded
-	return tx.Model(user).Preload("Event").Preload("Event.Organizer").Association("EventSignups").Find(&user.EventSignups)
+	return db.Model(user).Preload("Event").Preload("Event.Organizer").Association("EventSignups").Find(&user.EventSignups)
 }
 
 func (user *User) AfterDelete(tx *gorm.DB) error {

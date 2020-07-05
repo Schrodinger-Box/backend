@@ -61,10 +61,6 @@ func (event *Event) AfterSave(tx *gorm.DB) error {
 }
 
 func (event *Event) AfterFind(tx *gorm.DB) error {
-	// load all users who signed up this event with all their data side-loaded
-	if err := tx.Model(event).Preload("User").Association("EventSignups").Find(&event.EventSignups); err != nil {
-		return err
-	}
 	// Unmarshal LocationJSON into Location object
 	err := json.Unmarshal([]byte(*event.LocationJSON), &event.Location)
 	return errors.WithStack(err)
@@ -77,6 +73,10 @@ func (event *Event) AfterDelete(tx *gorm.DB) error {
 		return err
 	}
 	return tx.Delete(&eventSignups).Error
+}
+
+func (event *Event) LoadSignups(db *gorm.DB) error {
+	return db.Model(event).Preload("User").Association("EventSignups").Find(&event.EventSignups)
 }
 
 type OnlineLocation struct {

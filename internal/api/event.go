@@ -83,6 +83,7 @@ func EventGet(ctx *gin.Context) {
 		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
 		return
 	}
+	event.LoadSignups(db)
 	ctx.Status(http.StatusOK)
 	if err := jsonapi.MarshalPayload(ctx.Writer, event); err != nil {
 		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
@@ -143,6 +144,10 @@ func EventSignupCreate(ctx *gin.Context) {
 		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
 		return
 	}
+	if *event.OrganizerID == user.ID {
+		misc.ReturnStandardError(ctx, http.StatusBadRequest, "you cannot signup events organized by yourself")
+		return
+	}
 	eventSignup.EventID = &event.ID
 	eventSignup.Event = &event
 	eventSignup.UserID = &user.ID
@@ -188,8 +193,13 @@ func EventSignupDelete(ctx *gin.Context) {
 func EventsGet(ctx *gin.Context) {
 	// as per JSON:API specification v1.0, -id means sorting by id in descending order
 	sortQuery := ctx.DefaultQuery("sort", "-id")
-	offset, _ := strconv.Atoi(ctx.DefaultQuery("offset", "0"))
-	size, _ := strconv.Atoi(ctx.DefaultQuery("size", "5"))
+	// very important: page starts from 0
+	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "0"))
+
+	// set size of each page fixed at 10
+	size := 10
+	// calculate offset based on size and page
+	offset := page * size
 
 	// convert JSON:API sort query to SQL sorting syntax
 	sortSlice := strings.Split(sortQuery, ",")
@@ -202,33 +212,47 @@ func EventsGet(ctx *gin.Context) {
 	}
 	sort := strings.Join(sortSlice, ",")
 
-	db := ctx.MustGet("DB").(*gorm.DB)
 	var events []*model.Event
+	var count int64
+
+	db := ctx.MustGet("DB").(*gorm.DB)
+	db.Model(&events).Count(&count)
+	totalPages := int(count) / size
+	if int(count)%size != 0 {
+		totalPages++
+	}
+	if page > totalPages-1 || page < 0 {
+		// trying to access a page that does not exist
+		misc.ReturnStandardError(ctx, http.StatusBadRequest, "page requested does not exist")
+		return
+	}
 
 	if err := db.Preload(clause.Associations).Limit(size).Offset(offset).Order(sort).Find(&events).Error; err == nil {
-		ctx.Status(http.StatusOK)
+		for _, event := range events {
+			event.LoadSignups(db)
+		}
 		var jsonString strings.Builder
 		var jsonData map[string]interface{}
-		var count int64
 		var next, prev *string
+
+		ctx.Status(http.StatusOK)
 		if err := jsonapi.MarshalPayload(&jsonString, events); err == nil {
 			json.Unmarshal([]byte(jsonString.String()), &jsonData)
-			url := misc.APIAbsolutePath("/events") + "?sort=" + sortQuery + "&size=" + strconv.Itoa(size) + "&offset="
-			db.Model(&events).Count(&count)
+			url := misc.APIAbsolutePath("/events") + "?sort=" + sortQuery + "&page="
 			firstString := url + "0"
-			lastString := url + url + strconv.Itoa(int(count)/size*size)
-			if offset+size >= int(count) {
+			lastString := url + strconv.Itoa(totalPages-1)
+			if page == totalPages-1 {
 				// already at last page
 				next = nil
 			} else {
-				nextString := url + strconv.Itoa(offset+size)
+				nextString := url + strconv.Itoa(page+1)
 				next = &nextString
 			}
-			if offset-size < 0 {
+			if page == 0 {
 				// already at first page
 				prev = nil
 			} else {
-				prevString := url + strconv.Itoa(offset-size)
+				prevString := url + strconv.Itoa(page-1)
 				prev = &prevString
 			}
 			jsonData["links"] = map[string]*string{
@@ -236,6 +260,12 @@ func EventsGet(ctx *gin.Context) {
 				jsonapi.KeyLastPage:     &lastString,
 				jsonapi.KeyNextPage:     next,
 				jsonapi.KeyPreviousPage: prev,
+			}
+			jsonData["meta"] = map[string]int{
+				"total_pages":    totalPages,
+				"current_page":   page,
+				"max_page_size":  size,
+				"this_page_size": len(events),
 			}
 			json.NewEncoder(ctx.Writer).Encode(jsonData)
 		} else {

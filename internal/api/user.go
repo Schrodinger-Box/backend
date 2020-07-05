@@ -20,6 +20,7 @@ func UserGetSelf(ctx *gin.Context) {
 		return
 	}
 	user := userInterface.(*model.User)
+	user.LoadSignups(ctx.MustGet("DB").(*gorm.DB))
 	ctx.Status(http.StatusOK)
 	if err := jsonapi.MarshalPayload(ctx.Writer, user); err != nil {
 		http.Error(ctx.Writer, err.Error(), http.StatusInternalServerError)
@@ -75,6 +76,7 @@ func UserGet(ctx *gin.Context) {
 			return
 		}
 	}
+	user.LoadSignups(db)
 	ctx.Status(http.StatusOK)
 	if err := jsonapi.MarshalPayload(ctx.Writer, user); err != nil {
 		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
