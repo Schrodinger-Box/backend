@@ -109,8 +109,8 @@ func main() {
 			eventRouter.POST("", api.EventCreate)
 			eventRouter.GET("/:id", api.EventGet)
 			eventRouter.DELETE("/:id", api.EventDelete)
-
 		}
+		apiRouter.GET("/events", middleware.TokenMiddleware(), api.EventsGet)
 
 		eventSignupRouter := apiRouter.Group("/event_signup")
 		eventSignupRouter.Use(middleware.TokenMiddleware())
@@ -119,9 +119,13 @@ func main() {
 			eventSignupRouter.DELETE("/:id", api.EventSignupDelete)
 		}
 
-		apiRouter.GET("/events", middleware.TokenMiddleware(), api.EventsGet)
-
-		apiRouter.POST("/file", middleware.TokenMiddleware(), api.FileCreate)
+		fileRouter := apiRouter.Group("/file")
+		fileRouter.Use(middleware.TokenMiddleware())
+		{
+			fileRouter.POST("", api.FileCreate)
+			fileRouter.PATCH("", api.FileUpdate)
+			fileRouter.DELETE("/:id", api.FileDelete)
+		}
 		apiRouter.GET("/files", middleware.TokenMiddleware(), api.FilesGet)
 	}
 

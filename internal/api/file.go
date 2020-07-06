@@ -1,8 +1,11 @@
 package api
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -91,6 +94,85 @@ func FileCreate(ctx *gin.Context) {
 	if err := jsonapi.MarshalPayloadWithoutIncluded(ctx.Writer, file); err != nil {
 		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
 		return
+	}
+}
+
+func FileDelete(ctx *gin.Context) {
+	var user *model.User
+	if userInterface, exists := ctx.Get("User"); !exists {
+		misc.ReturnStandardError(ctx, http.StatusForbidden, "you have to be a registered user to delete file uploaded")
+		return
+	} else {
+		user = userInterface.(*model.User)
+	}
+	id := ctx.Param("id")
+	file := &model.File{}
+	db := ctx.MustGet("DB").(*gorm.DB)
+	if err := db.First(file, id).Error; errors.Is(err, gorm.ErrRecordNotFound) {
+		misc.ReturnStandardError(ctx, http.StatusNotFound, "file record does not exist")
+	} else if err != nil {
+		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
+	} else if *file.UploaderID != user.ID {
+		misc.ReturnStandardError(ctx, http.StatusForbidden, "you can only delete files uploaded by you")
+	} else if *file.Status != "active" {
+		misc.ReturnStandardError(ctx, http.StatusForbidden, "file record is not active")
+	} else if err := db.Delete(&file).Error; err != nil {
+		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
+	} else {
+		// delete file from Azure Blob Storage
+		accountName := viper.GetString("azure.accountName")
+		u, _ := url.Parse(fmt.Sprintf("https://%s.blob.core.windows.net/%s/%s",
+			accountName, FileTypes[*file.Type], *file.Filename))
+		if credential, err := azblob.NewSharedKeyCredential(accountName, viper.GetString("azure.accountKey")); err != nil {
+			misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
+		} else {
+			blobURL := azblob.NewBlobURL(*u, azblob.NewPipeline(credential, azblob.PipelineOptions{}))
+			azCtx := context.Background()
+			if _, err := blobURL.Delete(azCtx, azblob.DeleteSnapshotsOptionInclude, azblob.BlobAccessConditions{}); err != nil {
+				misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
+			} else {
+				ctx.Status(http.StatusNoContent)
+			}
+		}
+	}
+}
+
+func FileUpdate(ctx *gin.Context) {
+	fileRequest := &model.File{}
+	if err := jsonapi.UnmarshalPayload(ctx.Request.Body, fileRequest); err != nil {
+		misc.ReturnStandardError(ctx, http.StatusBadRequest, "cannot unmarshal JSON of request")
+		return
+	} else if fileRequest.ID <= 0 || fileRequest.Status == nil {
+		misc.ReturnStandardError(ctx, http.StatusBadRequest, "ID and status must be provided to update file record")
+		return
+	} else if *fileRequest.Status != "active" {
+		misc.ReturnStandardError(ctx, http.StatusBadRequest, "you can only update file status to 'active'")
+		return
+	}
+	var user *model.User
+	if userInterface, exists := ctx.Get("User"); !exists {
+		misc.ReturnStandardError(ctx, http.StatusForbidden, "you have to be a registered user to update file record")
+		return
+	} else {
+		user = userInterface.(*model.User)
+	}
+	file := &model.File{}
+	db := ctx.MustGet("DB").(*gorm.DB)
+	if err := db.First(file, fileRequest.ID).Error; errors.Is(err, gorm.ErrRecordNotFound) {
+		misc.ReturnStandardError(ctx, http.StatusNotFound, "file record does not exist")
+	} else if err != nil {
+		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
+	} else if *file.UploaderID != user.ID {
+		misc.ReturnStandardError(ctx, http.StatusForbidden, "you can only update files uploaded by you")
+	} else if err := db.Model(file).Update("status", *fileRequest.Status).Error; err != nil {
+		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
+	} else {
+		file.Uploader = user
+		ctx.Status(http.StatusOK)
+		if err := jsonapi.MarshalPayloadWithoutIncluded(ctx.Writer, file); err != nil {
+			misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
+			return
+		}
 	}
 }
 

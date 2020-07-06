@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/jsonapi"
+	"gorm.io/gorm"
 )
 
 type File struct {
@@ -38,4 +39,8 @@ func (file *File) JSONAPIMeta() *jsonapi.Meta {
 	} else {
 		return nil
 	}
+}
+
+func (file *File) AfterDelete(tx *gorm.DB) error {
+	return tx.Model(file).Update("status", "destroyed").Error
 }

@@ -1,6 +1,9 @@
 package model
 
-import "github.com/google/jsonapi"
+import (
+	"github.com/google/jsonapi"
+	"gorm.io/gorm"
+)
 
 type Token struct {
 	ID     uint    `jsonapi:"primary,token" gorm:"primarykey" header:"X-Token-ID" binding:"required"`
@@ -23,4 +26,8 @@ func (token Token) JSONAPILinks() *jsonapi.Links {
 	return &jsonapi.Links{
 		"auth": token.AuthURL,
 	}
+}
+
+func (token *Token) AfterDelete(tx *gorm.DB) error {
+	return tx.Model(token).Update("status", "destroyed").Error
 }

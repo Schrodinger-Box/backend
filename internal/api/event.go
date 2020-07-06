@@ -173,7 +173,7 @@ func EventSignupDelete(ctx *gin.Context) {
 	id := ctx.Param("id")
 	eventSignup := &model.EventSignup{}
 	db := ctx.MustGet("DB").(*gorm.DB)
-	if err := db.Preload("User").First(eventSignup, id).Error; errors.Is(err, gorm.ErrRecordNotFound) {
+	if err := db.First(eventSignup, id).Error; errors.Is(err, gorm.ErrRecordNotFound) {
 		misc.ReturnStandardError(ctx, http.StatusNotFound, "event signup record does not exist")
 	} else if err != nil {
 		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
