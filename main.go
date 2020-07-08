@@ -83,6 +83,7 @@ func main() {
 	router.Use(gin.Recovery())
 	router.Use(middleware.OptionsMiddleware)
 	router.Use(middleware.DatabaseMiddleware(db))
+	router.Static("/assets", "./assets")
 
 	// router group dealing with all API calls from front end
 	apiRouter := router.Group(viper.GetString("apiRoot"))

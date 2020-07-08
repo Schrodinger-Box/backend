@@ -24,7 +24,7 @@ type File struct {
 	// this is only returned when doing file.create and will not be logged in the database
 	QueryParam          string    `jsonapi:"-" gorm:"-"`
 	QueryParamExpiresAt time.Time `jsonapi:"-" gorm:"-"`
-	Endpoint			string    `jsonapi:"-" gorm:"-"`
+	Endpoint            string    `jsonapi:"-" gorm:"-"`
 
 	DBTime
 }

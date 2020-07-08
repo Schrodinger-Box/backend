@@ -59,14 +59,14 @@ func FileCreate(ctx *gin.Context) {
 		misc.ReturnStandardError(ctx, http.StatusBadRequest, "filename and type must be provided")
 		return
 	} else if _, ok := FileTypes[*file.Type]; !ok {
-		misc.ReturnStandardError(ctx, http.StatusBadRequest, "type '" + *file.Type + "' is not accepted")
+		misc.ReturnStandardError(ctx, http.StatusBadRequest, "type '"+*file.Type+"' is not accepted")
 		return
 	}
 	// get file extension
 	fileNameSlice := strings.Split(*file.Filename, ".")
 	extension := fileNameSlice[len(fileNameSlice)-1]
 	if _, ok := AllowedExtensions[extension]; !ok {
-		misc.ReturnStandardError(ctx, http.StatusBadRequest, "file extension '" + extension + "'is not accepted")
+		misc.ReturnStandardError(ctx, http.StatusBadRequest, "file extension '"+extension+"'is not accepted")
 		return
 	}
 	// standardize filename to uuid + extension
@@ -185,7 +185,7 @@ func FilesGet(ctx *gin.Context) {
 	}
 	fileType := ctx.DefaultQuery("type", DefaultType)
 	if _, ok := FileTypes[fileType]; !ok {
-		misc.ReturnStandardError(ctx, http.StatusBadRequest, "type '" + fileType + "' is not accepted")
+		misc.ReturnStandardError(ctx, http.StatusBadRequest, "type '"+fileType+"' is not accepted")
 		return
 	}
 	if ReadSASExpiresAt == nil || time.Now().After(*ReadSASExpiresAt) {
@@ -201,11 +201,11 @@ func FilesGet(ctx *gin.Context) {
 		newExpiresAt = newExpiresAt.Add(-SASValidAllowance)
 		ReadSASExpiresAt = &newExpiresAt
 	}
-	data := map[string]map[string]string {
+	data := map[string]map[string]string{
 		"meta": {
-			"qp": ReadSASQueryParam,
+			"qp":            ReadSASQueryParam,
 			"qp_expires_at": ReadSASExpiresAt.Format(time.RFC3339),
-			"endpoint": "https://" + viper.GetString("azure.accountName") + ".blob.core.windows.net/" + FileTypes[fileType] + "/",
+			"endpoint":      "https://" + viper.GetString("azure.accountName") + ".blob.core.windows.net/" + FileTypes[fileType] + "/",
 		},
 	}
 	ctx.JSON(http.StatusOK, data)

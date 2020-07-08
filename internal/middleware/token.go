@@ -16,15 +16,18 @@ func TokenMiddleware() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		token := model.Token{}
 		if err := ctx.ShouldBindHeader(&token); err != nil {
-			misc.ReturnStandardError(ctx, 401, "token missing")
+			misc.ReturnStandardError(ctx, http.StatusUnauthorized, "token missing")
 			return
 		}
 		db := ctx.MustGet("DB").(*gorm.DB)
-		if err := db.Where(&token).First(&token).Error; errors.Is(err, gorm.ErrRecordNotFound) {
-			misc.ReturnStandardError(ctx, 401, "token information invalid")
+		if token.ID <= 0 {
+			misc.ReturnStandardError(ctx, http.StatusBadRequest, "invalid token ID")
+			return
+		} else if err := db.Where(&token).First(&token).Error; errors.Is(err, gorm.ErrRecordNotFound) {
+			misc.ReturnStandardError(ctx, http.StatusUnauthorized, "invalid token information")
 			return
 		} else if err != nil {
-			misc.ReturnStandardError(ctx, 500, err.Error())
+			misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
 			return
 		}
 		ctx.Set("Token", &token)
@@ -36,7 +39,7 @@ func TokenMiddleware() gin.HandlerFunc {
 				ctx.Set("User", &user)
 			} else if !errors.Is(err, gorm.ErrRecordNotFound) {
 				// There is something wrong other than RecordNotFound (RNF means user has not been created)
-				misc.ReturnStandardError(ctx, 500, err.Error())
+				misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
 				return
 			}
 		} else {

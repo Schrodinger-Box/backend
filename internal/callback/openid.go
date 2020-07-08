@@ -21,6 +21,7 @@ func HandleOpenidCallback(ctx *gin.Context) {
 	id, err := openid.Verify(
 		fullUrl,
 		gormStore.DiscoveryCache, gormStore.NonceStore)
+	domain := viper.Get("domain")
 	if err == nil {
 		token := model.Token{}
 		if err := db.First(&token, tokenId).Error; err == nil {
@@ -31,20 +32,26 @@ func HandleOpenidCallback(ctx *gin.Context) {
 			token.Email = ctx.Query("openid.sreg.email")
 			token.Fullname = ctx.Query("openid.sreg.fullname")
 			if err := db.Save(&token).Error; err == nil {
-				ctx.HTML(http.StatusOK, "callback.tmpl", gin.H{})
+				ctx.HTML(http.StatusOK, "callback.tmpl", gin.H{
+					"domain": domain,
+					"name":   token.Fullname,
+				})
 			} else {
 				ctx.HTML(http.StatusInternalServerError, "error.tmpl", gin.H{
-					"error": "Unable to save authentication information to database:\n" + err.Error(),
+					"domain": domain,
+					"error":  "Unable to save authentication information to database:\n" + err.Error(),
 				})
 			}
 		} else {
 			ctx.HTML(http.StatusInternalServerError, "error.tmpl", gin.H{
-				"error": "Unable to retrieve token from database:\n" + err.Error(),
+				"domain": domain,
+				"error":  "Unable to retrieve token from database:\n" + err.Error(),
 			})
 		}
 	} else {
 		ctx.HTML(http.StatusInternalServerError, "error.tmpl", gin.H{
-			"error": "Unable to verify your authentication callback:\n" + err.Error(),
+			"domain": domain,
+			"error":  "Unable to verify your authentication callback:\n" + err.Error(),
 		})
 	}
 }

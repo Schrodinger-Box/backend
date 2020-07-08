@@ -1,16 +1,37 @@
 {{ define "callback.tmpl" }}
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-    <meta charset="utf-8">
-    <title>Authenticated, redirecting...</title>
-    <meta name="author" content="Schrodinger's Box">
-    <meta name="description" content="Authenticated and saving login token to local machine">
-</head>
-
-<body>
-</body>
-
-</html>
+    <html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Authenticated, redirecting...</title>
+        <!-- Scripts from external CDNs -->
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+        <link rel="stylesheet" href="{{ .domain }}/assets/callback.css">
+    </head>
+    <body>
+    <div id="root">
+        <div class="container container-pad">
+            <div class="row">
+                <div class="col-md-8 offset-md-2">
+                    <div class="card border-success text-success">
+                        <div class="card-header">
+                            <h4>Login Successful</h4>
+                        </div>
+                        <div class="card-body">
+                            <p>Welcome to Schrödinger's Box, <strong>{{ .name }}</strong>.</p>
+                            <p>We have verified this callback request and your OpenID identity.</p>
+                            <p>This window will be closed automatically. Please hold on rfor a second.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <footer class="footer">
+            <div class="container">
+                <p class="text-muted">Powered by Schrödinger's Box</p>
+            </div>
+        </footer>
+    </div>
+    </body>
+    </html>
 {{ end }}
