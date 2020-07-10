@@ -1,12 +1,15 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/jsonapi"
@@ -60,9 +63,31 @@ func EventCreate(ctx *gin.Context) {
 	}
 	event.OrganizerID = &user.ID
 	event.Organizer = user
+	images := event.Images
+	event.Images = nil
 	db := ctx.MustGet("DB").(*gorm.DB)
 	if err := db.Save(event).Error; err != nil {
 		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
+		return
+	}
+	// link images to this event
+	eventString := "events"
+	for _, image := range images {
+		if image.ID <= 0 {
+			misc.ReturnStandardError(ctx, http.StatusBadRequest, "invalid image file ID")
+		} else if err := db.Where(image).Find(image).Error; errors.Is(err, gorm.ErrRecordNotFound) {
+			misc.ReturnStandardError(ctx, http.StatusNotFound, "image specified not found")
+		} else if err != nil {
+			misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
+		} else if *image.Status != "active" || *image.Type != "images" {
+			misc.ReturnStandardError(ctx, http.StatusBadRequest, "image specified is not active or is not an image")
+		} else if image.LinkType != nil {
+			misc.ReturnStandardError(ctx, http.StatusBadRequest, "image has been linked to some other resource object")
+		} else if err := db.Model(&image).Updates(model.File{LinkID: &event.ID, LinkType: &eventString}).Error; err != nil {
+			misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
+		} else {
+			continue
+		}
 		return
 	}
 	ctx.Status(http.StatusCreated)
@@ -108,10 +133,19 @@ func EventDelete(ctx *gin.Context) {
 		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
 	} else if *event.OrganizerID != user.ID {
 		misc.ReturnStandardError(ctx, http.StatusForbidden, "you can only delete event organized by your own")
-	} else if err := db.Delete(&event).Error; err != nil {
-		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
 	} else {
-		ctx.Status(http.StatusNoContent)
+		// release file linkages
+		for _, image := range event.Images {
+			if err := db.Model(image).Updates(map[string]interface{}{"link_type": nil, "link_id": nil}).Error; err != nil {
+				misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
+				return
+			}
+		}
+		if err := db.Delete(&event).Error; err != nil {
+			misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
+		} else {
+			ctx.Status(http.StatusNoContent)
+		}
 	}
 }
 
@@ -162,6 +196,61 @@ func EventSignupCreate(ctx *gin.Context) {
 	}
 }
 
+func EventSignupUpdate(ctx *gin.Context) {
+	// there are two situations for an event signup record to be updated
+	// 1. the Organizer marks the user as attended (user.ID == signup.Event.OrganizerID)
+	// 2. the Participant leaves review to the event (user.ID == signup.UserID)
+	var user *model.User
+	if userInterface, exists := ctx.Get("User"); !exists {
+		misc.ReturnStandardError(ctx, http.StatusForbidden, "you have to be a registered user to update signup record")
+		return
+	} else {
+		user = userInterface.(*model.User)
+	}
+	signupRequest := &model.EventSignup{}
+	if err := jsonapi.UnmarshalPayload(ctx.Request.Body, signupRequest); err != nil {
+		misc.ReturnStandardError(ctx, http.StatusBadRequest, "cannot unmarshal JSON of request")
+		return
+	} else if signupRequest.ID <= 0 {
+		misc.ReturnStandardError(ctx, http.StatusBadRequest, "invalid event_signup ID")
+		return
+	}
+	db := ctx.MustGet("DB").(*gorm.DB)
+	signup := &model.EventSignup{}
+	reviewedString := "reviewed"
+	if err := db.Preload(clause.Associations).Find(&signup, signupRequest.ID).Error; errors.Is(err, gorm.ErrRecordNotFound) {
+		misc.ReturnStandardError(ctx, http.StatusNotFound, "specified event_signup cannot be found")
+	} else if user.ID == *signup.UserID {
+		if *signup.Status == "created" {
+			misc.ReturnStandardError(ctx, http.StatusForbidden, "you cannot leave review before you attend the event")
+		} else if *signup.Status == "reviewed" {
+			misc.ReturnStandardError(ctx, http.StatusForbidden, "you have already reviewed this event before")
+		} else if signupRequest.ReviewScore == nil || signupRequest.ReviewText == nil {
+			misc.ReturnStandardError(ctx, http.StatusBadRequest, "you must provide both score and text comment")
+		} else if err := db.Model(signup).Updates(model.EventSignup{ReviewText: signupRequest.ReviewText, ReviewScore: signupRequest.ReviewScore, Status: &reviewedString}).Error; err != nil {
+			misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
+		} else {
+			ctx.Status(http.StatusOK)
+			if err := jsonapi.MarshalPayload(ctx.Writer, signup); err != nil {
+				misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
+			}
+		}
+	} else if user.ID == *signup.Event.OrganizerID {
+		if *signup.Status != "created" {
+			misc.ReturnStandardError(ctx, http.StatusForbidden, "the user's attendance has been marked")
+		} else if err := db.Model(signup).Update("status", "attended").Error; err != nil {
+			misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
+		} else {
+			ctx.Status(http.StatusOK)
+			if err := jsonapi.MarshalPayload(ctx.Writer, signup); err != nil {
+				misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
+			}
+		}
+	} else {
+		misc.ReturnStandardError(ctx, http.StatusForbidden, "you are neither event organizer nor participant of this signup record")
+	}
+}
+
 func EventSignupDelete(ctx *gin.Context) {
 	var user *model.User
 	if userInterface, exists := ctx.Get("User"); !exists {
@@ -191,10 +280,18 @@ func EventSignupDelete(ctx *gin.Context) {
  */
 
 func EventsGet(ctx *gin.Context) {
+	// keys allowed for filter requests
+	filterKeys := map[string]struct{}{
+		"organizer_id": {},
+		"type":         {},
+		"time_begin":   {},
+		"time_end":     {},
+	}
 	// as per JSON:API specification v1.0, -id means sorting by id in descending order
 	sortQuery := ctx.DefaultQuery("sort", "-id")
 	// very important: page starts from 0
 	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "0"))
+	filterArray := ctx.QueryArray("filter")
 
 	// set size of each page fixed at 10
 	size := 10
@@ -216,18 +313,34 @@ func EventsGet(ctx *gin.Context) {
 	var count int64
 
 	db := ctx.MustGet("DB").(*gorm.DB)
-	db.Model(&events).Count(&count)
+	tx := db
+	// build query transaction
+	for _, filter := range filterArray {
+		filterSlice := strings.Split(filter, ",")
+		if _, ok := filterKeys[filterSlice[0]]; !ok {
+			misc.ReturnStandardError(ctx, http.StatusBadRequest, fmt.Sprintf("invalid filter key: '%s'", filterSlice[0]))
+			return
+		} else if len(filterSlice) == 2 {
+			tx = tx.Where(fmt.Sprintf("%s = ?", filterSlice[0]), filterSlice[1])
+		} else if len(filterSlice) == 3 {
+			tx = tx.Where(fmt.Sprintf("%s %s ?", filterSlice[0], filterSlice[1]), filterSlice[2])
+		} else {
+			misc.ReturnStandardError(ctx, http.StatusBadRequest, fmt.Sprintf("invalid filter format: '%s'", filter))
+			return
+		}
+	}
+	dbCtx, _ := context.WithTimeout(context.Background(), time.Second)
+	tx.WithContext(dbCtx).Model(events).Count(&count)
 	totalPages := int(count) / size
 	if int(count)%size != 0 {
 		totalPages++
 	}
-	if page > totalPages-1 || page < 0 {
+	if totalPages != 0 && (page > totalPages-1 || page < 0) {
 		// trying to access a page that does not exist
 		misc.ReturnStandardError(ctx, http.StatusBadRequest, "page requested does not exist")
 		return
 	}
-
-	if err := db.Preload(clause.Associations).Limit(size).Offset(offset).Order(sort).Find(&events).Error; err == nil {
+	if err := tx.Preload(clause.Associations).Offset(offset).Order(sort).Limit(size).Find(&events).Error; err == nil {
 		for _, event := range events {
 			event.LoadSignups(db)
 		}
@@ -240,8 +353,13 @@ func EventsGet(ctx *gin.Context) {
 			json.Unmarshal([]byte(jsonString.String()), &jsonData)
 			url := misc.APIAbsolutePath("/events") + "?sort=" + sortQuery + "&page="
 			firstString := url + "0"
-			lastString := url + strconv.Itoa(totalPages-1)
-			if page == totalPages-1 {
+			var lastString string
+			if totalPages == 0 {
+				lastString = url + "0"
+			} else {
+				lastString = url + strconv.Itoa(totalPages-1)
+			}
+			if page == totalPages-1 || totalPages == 0 {
 				// already at last page
 				next = nil
 			} else {

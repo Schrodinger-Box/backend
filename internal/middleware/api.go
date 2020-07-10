@@ -9,4 +9,5 @@ import (
 func APIMiddleware(ctx *gin.Context) {
 	ctx.Header("Content-Type", jsonapi.MediaType)
 	ctx.Header("Access-Control-Allow-Origin", viper.GetString("cors.origin"))
+	ctx.Header("Access-Control-Allow-Credentials", "true")
 }

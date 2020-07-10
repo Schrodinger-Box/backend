@@ -15,11 +15,15 @@ type File struct {
 	Uploader   *User `jsonapi:"relation,uploader"`
 
 	// Status codes:
-	// - created : newly created file record, have not uploaded yet
-	// - active  : created and uploaded file
+	// - created   : newly created file record, have not uploaded yet
+	// - active    : created and uploaded file
 	// - destroyed : file deleted
 	Status *string `jsonapi:"attr,status" gorm:"not null;default:'created'"`
 	Type   *string `jsonapi:"attr,type" gorm:"not null"`
+
+	// these two specifies this file links to which resource (e.g. ID=1, Type=event)
+	LinkID   *uint   `jsonapi:"-"`
+	LinkType *string `jsonapi:"-"`
 
 	// this is only returned when doing file.create and will not be logged in the database
 	QueryParam          string    `jsonapi:"-" gorm:"-"`

@@ -25,6 +25,7 @@ type Event struct {
 	LocationJSON *string     `gorm:"not null"`
 	Location     interface{} `jsonapi:"attr,location" gorm:"-"`
 	Type         *string     `jsonapi:"attr,type" gorm:"not null"`
+	Images       []*File     `jsonapi:"relation,images,omitempty" gorm:"polymorphic:Link"`
 
 	OrganizerID  *uint          `gorm:"not null"`
 	Organizer    *User          `jsonapi:"relation,organizer,omitempty"`
@@ -72,7 +73,11 @@ func (event *Event) AfterDelete(tx *gorm.DB) error {
 	if err := tx.Model(event).Association("EventSignups").Find(&eventSignups); err != nil {
 		return err
 	}
-	return tx.Delete(&eventSignups).Error
+	if len(eventSignups) == 0 {
+		return nil
+	} else {
+		return tx.Delete(&eventSignups).Error
+	}
 }
 
 func (event *Event) LoadSignups(db *gorm.DB) error {
@@ -106,5 +111,23 @@ type EventSignup struct {
 	UserID  *uint  `gorm:"not null"`
 	User    *User  `jsonapi:"relation,user,omitempty" gorm:"PRELOAD:false"`
 
+	// Status codes:
+	// - created   : signup record is initially created
+	// - attended  : this user's attendance is recorded by the event organizer
+	// - reviewed  : this user has left his/her review to the event
+	// - withdrawn : this user withdrawn his/her signup record to the event
+	Status      *string `jsonapi:"attr,status" gorm:"not null,default:created"`
+	ReviewScore *uint   `jsonapi:"attr,review_score,omitempty" gorm:"default:NULL"`
+	ReviewText  *string `jsonapi:"attr,review_text,omitempty" gorm:"default:NULL"`
+
 	DBTime
+}
+
+func (signup *EventSignup) AfterDelete(tx *gorm.DB) error {
+	if *signup.Status == "created" {
+		// mark the signup record as withdrawn if it is deleted before user attend the event
+		return tx.Model(signup).Update("status", "withdrawn").Error
+	} else {
+		return nil
+	}
 }

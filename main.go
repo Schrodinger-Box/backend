@@ -117,6 +117,7 @@ func main() {
 		eventSignupRouter.Use(middleware.TokenMiddleware())
 		{
 			eventSignupRouter.POST("", api.EventSignupCreate)
+			eventSignupRouter.PATCH("", api.EventSignupUpdate)
 			eventSignupRouter.DELETE("/:id", api.EventSignupDelete)
 		}
 
