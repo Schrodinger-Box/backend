@@ -7,6 +7,7 @@ This app is still in early stage of development. All APIs provided by this
 backend server complies with [JSON:API Specification v1.0](https://jsonapi.org/format/1.0/).
 
 [![Build Status](https://travis-ci.com/Schrodinger-Box/backend.svg?branch=master)](https://travis-ci.com/Schrodinger-Box/backend)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FSchrodinger-Box%2Fbackend.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2FSchrodinger-Box%2Fbackend?ref=badge_shield)
 
 ## API documentation
 API specification for this app is written in [OpenAPI Specification (Version 3.0.3)](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.3.md).
@@ -41,3 +42,6 @@ Please go check it out.
 - [cron](https://github.com/robfig/cron) - Cron-like scheduler for Go
 - [viper](https://github.com/spf13/viper) - Configuration loader
 - ...
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FSchrodinger-Box%2Fbackend.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2FSchrodinger-Box%2Fbackend?ref=badge_large)
