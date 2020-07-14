@@ -12,7 +12,7 @@ import (
 
 type User struct {
 	ID       uint    `jsonapi:"primary,user" gorm:"primarykey"`
-	Nickname *string `jsonapi:"attr,nickname" gorm:"unique,not null"`
+	Nickname *string `jsonapi:"attr,nickname" gorm:"unique;not null"`
 	Type     *string `jsonapi:"attr,type" gorm:"not null"`
 
 	IdentityFields

@@ -116,9 +116,9 @@ type EventSignup struct {
 	// - attended  : this user's attendance is recorded by the event organizer
 	// - reviewed  : this user has left his/her review to the event
 	// - withdrawn : this user withdrawn his/her signup record to the event
-	Status      *string `jsonapi:"attr,status" gorm:"not null,default:created"`
-	ReviewScore *uint   `jsonapi:"attr,review_score,omitempty" gorm:"default:NULL"`
-	ReviewText  *string `jsonapi:"attr,review_text,omitempty" gorm:"default:NULL"`
+	Status      *string `jsonapi:"attr,status" gorm:"not null;default:'created'"`
+	ReviewScore *uint   `jsonapi:"attr,review_score,omitempty"`
+	ReviewText  *string `jsonapi:"attr,review_text,omitempty"`
 
 	DBTime
 }

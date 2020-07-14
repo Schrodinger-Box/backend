@@ -42,6 +42,13 @@ func UserCreate(ctx *gin.Context) {
 		return
 	}
 	db := ctx.MustGet("DB").(*gorm.DB)
+	if err := db.Where("nickname = ?", userRequest.Nickname).First(&model.User{}).Error; err == nil {
+		misc.ReturnStandardError(ctx, http.StatusBadRequest, "nickname has been taken by someone else")
+		return
+	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
+		return
+	}
 	// We only take the nickname and type of the request object
 	// TODO: we need some permission check here (regarding type)
 	user := &model.User{

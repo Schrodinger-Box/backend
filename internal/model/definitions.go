@@ -16,7 +16,7 @@ type DBTime struct {
 
 // Fields shared by both Token and User
 type IdentityFields struct {
-	NUSID    string `jsonapi:"attr,nusid,omitempty" gorm:"default=NULL"`
-	Email    string `jsonapi:"attr,email,omitempty" gorm:"default=NULL"`
-	Fullname string `jsonapi:"attr,fullname,omitempty" gorm:"default=NULL"`
+	NUSID    string `jsonapi:"attr,nusid,omitempty"`
+	Email    string `jsonapi:"attr,email,omitempty"`
+	Fullname string `jsonapi:"attr,fullname,omitempty"`
 }
