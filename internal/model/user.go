@@ -58,24 +58,30 @@ func (user *User) CreateImmediateNotificationAll(db *gorm.DB, action string, tex
 	if user.Subscription != nil {
 		subscription := reflect.ValueOf(*user.Subscription)
 		for _, enabledService := range enabledServices {
-			subscribed := subscription.FieldByName(strings.Title(enabledService) + action).Interface().(*bool)
+			if subscribed := subscription.FieldByName(strings.Title(enabledService) + action).Interface().(*bool); !*subscribed {
+				// skip if not subscribed
+				continue
+			}
 			var target string
 			switch enabledService {
 			case "telegram":
-				target = strconv.Itoa(int(*user.Subscription.TelegramChatID))
+				if chatId := user.Subscription.TelegramChatID; chatId == nil {
+					// skip if chatId is empty
+					continue
+				} else {
+					target = strconv.Itoa(int(*chatId))
+				}
 			}
-			if *subscribed {
-				now := time.Now()
-				notification := Notification{
-					UserID:   &user.ID,
-					Text:     &text,
-					Target:   &target,
-					SendTime: &now,
-					Medium:   &enabledService,
-				}
-				if err := db.Save(&notification).Error; err != nil {
-					return err
-				}
+			now := time.Now()
+			notification := Notification{
+				UserID:   &user.ID,
+				Text:     &text,
+				Target:   &target,
+				SendTime: &now,
+				Medium:   &enabledService,
+			}
+			if err := db.Save(&notification).Error; err != nil {
+				return err
 			}
 		}
 	}

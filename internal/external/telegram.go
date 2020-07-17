@@ -33,16 +33,45 @@ func TelegramLoop(db *gorm.DB, bot *tgbotapi.BotAPI) {
 		}
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "")
 		chatId := update.Message.Chat.ID
+		// check if subscribed to provide different help info and steps
+		subscription := &model.NotificationSubscription{}
+		if err := db.Where("telegram_chat_id = ?", chatId).First(subscription).Error; err != nil {
+			// this telegram account has not subscribed to anyone
+			subscription = nil
+		}
 		if update.Message.IsCommand() {
 			switch update.Message.Command() {
 			case "help":
 				msg.Text = "Welcome to Schrodinger's Box Telegram bot!\n" +
-					"You can:\n" +
-					"type /subscribe to subscribe to notifications from Schrodinger's Box;\n" +
-					"type /help to show this message again."
+					"You can:\n"
+				if subscription == nil {
+					msg.Text += "type /subscribe to subscribe to notifications from Schrodinger's Box;\n"
+				} else {
+					msg.Text += "type /unsub to unsubscribe to ALL notifications from Schrodinger's Box;\n"
+					msg.Text += "type /adjust to adjust what type of messages you want to subscribe;\n"
+				}
+				msg.Text += "type /help to show this message again."
 			case "subscribe":
-				msg.Text = "Please enter your Token ID. This can be obtained from the website."
-				actionCache[chatId] = "token_id"
+				if subscription == nil {
+					msg.Text = "Please enter your Token ID. This can be obtained from the website."
+					actionCache[chatId] = "token_id"
+				} else {
+					msg.Text = "You have already subscribed to a user. " +
+						"You have to unsubscribe from it before you can make new subscription!"
+				}
+			case "unsub":
+				if subscription == nil {
+					msg.Text = "You have not subscribed to anyone!"
+				} else {
+					if err := db.Model(subscription).Updates(map[string]interface{}{"telegram_chat_id": nil}).Error; err != nil {
+						msg.Text = "Something wrong occurred at the server side. Maybe try this again later?"
+					} else {
+						msg.Text = "Successfully unsubscribed. Hope we can get your subscription again in the future."
+					}
+				}
+			case "adjust":
+				msg.Text = getSubscriptionText(subscription)
+				actionCache[chatId] = "adjust"
 			}
 		} else {
 			if val, ok := actionCache[chatId]; ok && val != "" {
@@ -82,8 +111,8 @@ func TelegramLoop(db *gorm.DB, bot *tgbotapi.BotAPI) {
 								"Please try to enter Token Secret a while later."
 							// not changing action cache for this case
 						} else {
-							subscription := model.NotificationSubscription{}
-							if err := db.Where("user_id = ?", user.ID).FirstOrInit(&subscription).Error; err != nil {
+							subscription = &model.NotificationSubscription{}
+							if err := db.Where("user_id = ?", user.ID).FirstOrInit(subscription).Error; err != nil {
 								// something wrong other than record not found occurred, not changing action cache for this case
 								msg.Text = "Something wrong happens when subscribing you to this user.\n" +
 									"Please try to enter Token Secret a while later."
@@ -93,7 +122,7 @@ func TelegramLoop(db *gorm.DB, bot *tgbotapi.BotAPI) {
 							} else {
 								subscription.UserID = &user.ID
 								subscription.TelegramChatID = &chatId
-								if err := db.Save(&subscription).Error; err != nil {
+								if err := db.Save(subscription).Error; err != nil {
 									msg.Text = "Something wrong happens when subscribing you to this user.\n" +
 										"Please try to enter Token Secret a while later."
 									// not changing action cache for this case
@@ -103,6 +132,30 @@ func TelegramLoop(db *gorm.DB, bot *tgbotapi.BotAPI) {
 								}
 							}
 						}
+					}
+				case "adjust":
+					if update.Message.Text == "done" {
+						actionCache[chatId] = ""
+						msg.Text = "OK. You are now at the main menu again."
+					} else {
+						var err error
+						switch update.Message.Text {
+						case "1":
+							err = db.Model(subscription).Update("telegram_event_reminder", !*subscription.TelegramEventReminder).Error
+						case "2":
+							err = db.Model(subscription).Update("telegram_event_suggestion", !*subscription.TelegramEventSuggestion).Error
+						case "3":
+							err = db.Model(subscription).Update("telegram_user_login", !*subscription.TelegramUserLogin).Error
+						default:
+							err = errors.New("invalid index entered")
+						}
+						if err == nil {
+							msg.Text = "Successfully toggled setting.\n\n"
+						} else {
+							msg.Text = "Something wrong occurred: " + err.Error() + "\n\n"
+						}
+						msg.Text += getSubscriptionText(subscription)
+						msg.Text += "\nYou can enter 'done' to go back to main menu."
 					}
 				}
 			} else {
@@ -209,4 +262,25 @@ func TelegramCron(db *gorm.DB, bot *tgbotapi.BotAPI) {
 
 func sendMessage(bot *tgbotapi.BotAPI, chatId int64, message string) (tgbotapi.Message, error) {
 	return bot.Send(tgbotapi.NewMessage(chatId, message))
+}
+
+func getSubscriptionText(subscription *model.NotificationSubscription) string {
+	text := "Your current subscription setting is:\n"
+	if *subscription.TelegramEventReminder {
+		text += "1. Event Reminder - ON\n"
+	} else {
+		text += "1. Event Reminder - OFF\n"
+	}
+	if *subscription.TelegramEventSuggestion {
+		text += "2. Event Suggestion - ON\n"
+	} else {
+		text += "2. Event Suggestion - OFF\n"
+	}
+	if *subscription.TelegramUserLogin {
+		text += "3. New Login Notification - ON\n"
+	} else {
+		text += "3. New Login Notification - OFF\n"
+	}
+	text += "\nPlease enter the index to toggle each item. "
+	return text
 }
