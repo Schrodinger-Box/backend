@@ -16,9 +16,9 @@ import (
 
 	"schrodinger-box/internal/api"
 	"schrodinger-box/internal/callback"
+	"schrodinger-box/internal/external"
 	"schrodinger-box/internal/middleware"
 	"schrodinger-box/internal/model"
-	"schrodinger-box/internal/telegram"
 )
 
 var startTime time.Time
@@ -69,7 +69,9 @@ func main() {
 		model.User{},
 		model.Event{},
 		model.EventSignup{},
-		model.TelegramSubscription{},
+		model.Notification{},
+		model.NotificationBatch{},
+		model.NotificationSubscription{},
 		model.File{},
 	}
 	if err := db.AutoMigrate(tables...); err != nil {
@@ -136,29 +138,26 @@ func main() {
 		callbackRouter.GET("/openid/:tokenId", callback.HandleOpenidCallback)
 	}
 
-	router.GET("/print_token", middleware.TokenMiddleware(), printToken)
-
-	if viper.GetBool("external.telegram.enable") {
-		c := cron.New()
-		// telegram updates handler
-		go telegram.Loop(db, bot)
-		// telegram event scheduler
-		c.AddFunc(viper.GetString("api.telegram.cron"), func() { telegram.Cron(db, bot) })
-		c.Start()
+	enabledServices := viper.GetStringSlice("external.enable")
+	for _, enabledService := range enabledServices {
+		switch enabledService {
+		case "telegram":
+			// telegram updates handler
+			go external.TelegramLoop(db, bot)
+			// telegram event scheduler
+			c := cron.New(cron.WithParser(cron.NewParser(
+				cron.SecondOptional | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow,
+			)))
+			if _, err := c.AddFunc(viper.GetString("external.telegram.cron"), func() { external.TelegramCron(db, bot) }); err != nil {
+				panic("Unable to start Cron for Telegram - " + err.Error())
+			}
+			c.Start()
+		default:
+			// do nothing for unknown service
+		}
 	}
 
 	router.Run(viper.GetString("listen"))
-}
-
-func printToken(ctx *gin.Context) {
-	_, exists := ctx.Get("User")
-	if !exists {
-		// User has not been created, return 404 to tell client to create user
-		ctx.String(http.StatusBadRequest, "You have not yet create a Schrodinger's Box account.")
-		return
-	}
-	token := ctx.MustGet("Token").(*model.Token)
-	ctx.String(http.StatusOK, "Your Token ID is: %d;\nYour Token Secret is: %s", token.ID, *token.Secret)
 }
 
 func uptime(ctx *gin.Context) {

@@ -19,12 +19,15 @@ openid:
   # whether to verify callback with the OP server WHEN ASSOCIATION MODE IS ON
   doubleVerification: false
 external:
+  # whether to enable integration of external providers (for both cron and notifications)
+  enable:
+    - telegram
   telegram:
-    # whether enabling the bot's function (including cron module)
-    enable: true
     # the bot's authorization token
     key: "1140803138:SomethingSomething"
     # default cron interval is 1 execution per minute
+    # second field is OPTIONAL and it is not suggested to set it to be too frequent
+    # format: [Second] Minute Hour DoM Month DoW
     cron: "* * * * *"
 cors:
   # defines Access-Control-Allow-Origin header returned for API requests

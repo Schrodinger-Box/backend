@@ -32,6 +32,12 @@ func HandleOpenidCallback(ctx *gin.Context) {
 			token.Email = ctx.Query("openid.sreg.email")
 			token.Fullname = ctx.Query("openid.sreg.fullname")
 			if err := db.Save(&token).Error; err == nil {
+				// handle login notification
+				user := &model.User{}
+				if err := db.Preload("Subscription").Where("nus_id = ?", token.NUSID).First(user).Error; err == nil {
+					user.CreateImmediateNotificationAll(
+						db, "UserLogin", "You have a new login for Schrodinger's Box through OpenID")
+				}
 				ctx.HTML(http.StatusOK, "callback.tmpl", gin.H{
 					"domain": domain,
 					"name":   token.Fullname,

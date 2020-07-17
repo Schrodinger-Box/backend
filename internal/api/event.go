@@ -294,7 +294,7 @@ func EventsGet(ctx *gin.Context) {
 	filterArray := ctx.QueryArray("filter")
 
 	// set size of each page fixed at 10
-	size := 10
+	size := 12
 	// calculate offset based on size and page
 	offset := page * size
 
