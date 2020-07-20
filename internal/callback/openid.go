@@ -3,6 +3,7 @@ package callback
 import (
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/Schrodinger-Box/gormid"
 	"github.com/Schrodinger-Box/openid-go"
@@ -35,8 +36,8 @@ func HandleOpenidCallback(ctx *gin.Context) {
 				// handle login notification
 				user := &model.User{}
 				if err := db.Preload("Subscription").Where("nus_id = ?", token.NUSID).First(user).Error; err == nil {
-					user.CreateImmediateNotificationAll(
-						db, "UserLogin", "You have a new login for Schrodinger's Box through OpenID")
+					user.CreateNotificationAll(
+						db, "UserLogin", "You have a new login for Schrodinger's Box through OpenID", time.Now())
 				}
 				ctx.HTML(http.StatusOK, "callback.tmpl", gin.H{
 					"domain": domain,

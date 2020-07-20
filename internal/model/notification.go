@@ -37,15 +37,13 @@ type Notification struct {
 type NotificationBatch struct {
 	ID uint `gorm:"primary"`
 	// Link ID format:
-	// Event-123-1day-telegram
-	//   |    |    |        ┕ medium
+	// Event-123-1day
 	//   |    |    ┕--------- action
 	//   |    ┕-------------- related resource ID
 	//   ┕------------------- related resource type (currently only Event)
 	// Link ID should be unique to avoid sending duplicated messages of the same action
 	// since we are using soft delete, checking of duplication LinkID is done manually
 	LinkID *string `gorm:"not null"`
-	Medium *string `gorm:"not null"`
 	// Template tags:
 	// :nickname: , :fullname: , :email: , :nusid: , :event_title: , :time_begin: , :time_end:
 	// (custom tags) :c1: , :c2: , :c3: , :c4: , :c5:
@@ -74,6 +72,10 @@ type NotificationSubscription struct {
 	TelegramEventSuggestion *bool `gorm:"not null;default:1"`
 	TelegramEventUpdate     *bool `gorm:"not null;default:1"`
 	TelegramUserLogin       *bool `gorm:"not null;default:1"`
+	EmailEventReminder      *bool `gorm:"not null;default:1"`
+	EmailEventSuggestion    *bool `gorm:"not null;default:1"`
+	EmailEventUpdate        *bool `gorm:"not null;default:1"`
+	EmailUserLogin          *bool `gorm:"not null;default:1"`
 }
 
 // marks a notification record as 'sent'
@@ -111,8 +113,7 @@ func (batch *NotificationBatch) AfterUpdate(tx *gorm.DB) error {
 func (batch *NotificationBatch) Create(db *gorm.DB, link interface{}, action string) error {
 	linkID := reflect.TypeOf(link).String() +
 		strconv.Itoa(int(reflect.ValueOf(link).FieldByName("ID").Uint())) +
-		action +
-		*batch.Medium
+		action
 	dupNotification := &Notification{}
 	if err := db.Model(Notification{}).Where("link_id", linkID).First(dupNotification).Error; err == nil {
 		return errors.New("duplicate LinkID is found")

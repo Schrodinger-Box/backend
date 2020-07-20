@@ -62,6 +62,11 @@ func UserCreate(ctx *gin.Context) {
 		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
 		return
 	}
+	// create default preference table for user
+	if err := db.Save(&model.NotificationSubscription{UserID: &user.ID}).Error; err != nil {
+		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
+		return
+	}
 	ctx.Status(http.StatusCreated)
 	if err := jsonapi.MarshalPayload(ctx.Writer, user); err != nil {
 		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())

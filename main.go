@@ -46,14 +46,6 @@ func main() {
 	}
 
 	// load essential interfaces (Telegram bot API, database)
-	// Telegram Bot API
-	bot, err := tgbotapi.NewBotAPI(viper.GetString("external.telegram.key"))
-	if err != nil {
-		panic("Failed to connect to Telegram bot API: " + err.Error())
-	} else {
-		bot.Debug = viper.GetBool("debug")
-		debugPrint("Authorized on account %s", bot.Self.UserName)
-	}
 	// database
 	db, err := gorm.Open(mysql.Open(viper.GetString("database")), &gorm.Config{})
 	if err != nil {
@@ -136,26 +128,42 @@ func main() {
 	callbackRouter := router.Group("/callback")
 	{
 		callbackRouter.GET("/openid/:tokenId", callback.HandleOpenidCallback)
+		callbackRouter.GET("/unsub", callback.HandleUnsub)
 	}
 
 	enabledServices := viper.GetStringSlice("external.enable")
+	c := cron.New(cron.WithParser(cron.NewParser(
+		cron.SecondOptional | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow,
+	)))
+	if _, err := c.AddFunc(viper.GetString("external.notification.cron"), func() { external.NotificationCron(db) }); err != nil {
+		panic("Unable to start cron for Notification - " + err.Error())
+	}
 	for _, enabledService := range enabledServices {
 		switch enabledService {
 		case "telegram":
+			// authorize using bot API Key
+			bot, err := tgbotapi.NewBotAPI(viper.GetString("external.telegram.key"))
+			if err != nil {
+				panic("Failed to connect to Telegram bot API: " + err.Error())
+			} else {
+				bot.Debug = viper.GetBool("debug")
+				debugPrint("Authorized on account %s", bot.Self.UserName)
+			}
 			// telegram updates handler
 			go external.TelegramLoop(db, bot)
 			// telegram event scheduler
-			c := cron.New(cron.WithParser(cron.NewParser(
-				cron.SecondOptional | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow,
-			)))
 			if _, err := c.AddFunc(viper.GetString("external.telegram.cron"), func() { external.TelegramCron(db, bot) }); err != nil {
-				panic("Unable to start Cron for Telegram - " + err.Error())
+				panic("Unable to start cron for Telegram - " + err.Error())
 			}
-			c.Start()
+		case "email":
+			if _, err := c.AddFunc(viper.GetString("external.email.cron"), func() { external.EmailCron(db) }); err != nil {
+				panic("Unable to start cron for Email - " + err.Error())
+			}
 		default:
 			// do nothing for unknown service
 		}
 	}
+	c.Start()
 
 	router.Run(viper.GetString("listen"))
 }

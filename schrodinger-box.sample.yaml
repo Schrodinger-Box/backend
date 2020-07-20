@@ -22,13 +22,29 @@ external:
   # whether to enable integration of external providers (for both cron and notifications)
   enable:
     - telegram
+    - email
+  # general setting for notification module
+  notification:
+    # default cron interval is 1 execution per 20 seconds
+    # second field is OPTIONAL and it is not suggested to set it to be too frequent
+    # format: [Second] Minute Hour DoM Month DoW
+    cron: "*/20 * * * * *"
   telegram:
     # the bot's authorization token
     key: "1140803138:SomethingSomething"
-    # default cron interval is 1 execution per minute
-    # second field is OPTIONAL and it is not suggested to set it to be too frequent
-    # format: [Second] Minute Hour DoM Month DoW
+    # default: 1 execution per 1 minute
     cron: "* * * * *"
+  email:
+    # we use Sendgrid API to send emails
+    key: SG.SomeKey_kK
+    from: Schrodinger's Box Notification <schrodinger-box@example.com>
+    # this is used to generate a hash to verify unsubscription request
+    # hash := fmt.Sprintf("%x", md5.Sum([]byte(user.Email + unsubKey)))
+    unsubKey: SomeRandomKey
+    # default: 1 execution per 1 minute
+    cron: "* * * * *"
+  bitly:
+    key: some_bit.ly_generic_access_token
 cors:
   # defines Access-Control-Allow-Origin header returned for API requests
   origin: "*"

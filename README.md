@@ -44,4 +44,6 @@ Please go check it out.
 - ...
 
 ## License
+This backend server is open-sourced under The 3-Clause BSD License. Please refer to [LICENSE](LICENSE) for more information.
+
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FSchrodinger-Box%2Fbackend.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2FSchrodinger-Box%2Fbackend?ref=badge_large)
