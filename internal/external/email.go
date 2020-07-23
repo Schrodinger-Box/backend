@@ -38,7 +38,7 @@ func emailSend(toString string, messageString string) (err error) {
 	message := mail.NewSingleEmail(from, "New Message from Schrodinger's Box", to, "You have a new message from Scherodinger's Box:", "<p>"+messageString+"</p>")
 	client := sendgrid.NewSendClient(viper.GetString("external.email.key"))
 	result, err := client.Send(message)
-	if err == nil && result.StatusCode >= 300 {
+	if err == nil && (result.StatusCode >= 300 || result.StatusCode < 200) {
 		err = errors.New("sendgrid returned a non-200 response")
 	}
 	return err

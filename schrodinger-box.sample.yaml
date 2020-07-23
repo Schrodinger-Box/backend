@@ -23,6 +23,7 @@ external:
   enable:
     - telegram
     - email
+    - sms
   # general setting for notification module
   notification:
     # default cron interval is 1 execution per 20 seconds
@@ -42,6 +43,13 @@ external:
     # hash := fmt.Sprintf("%x", md5.Sum([]byte(user.Email + unsubKey)))
     unsubKey: SomeRandomKey
     # default: 1 execution per 1 minute
+    cron: "* * * * *"
+  sms:
+    # we use Twilio API to send SMSes
+    sid: account_sid
+    token: some_auth_token
+    from: "+11232234455"
+    unsubKey: SomeRandomKey
     cron: "* * * * *"
   bitly:
     key: some_bit.ly_generic_access_token

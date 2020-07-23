@@ -72,10 +72,22 @@ type NotificationSubscription struct {
 	TelegramEventSuggestion *bool `gorm:"not null;default:1"`
 	TelegramEventUpdate     *bool `gorm:"not null;default:1"`
 	TelegramUserLogin       *bool `gorm:"not null;default:1"`
-	EmailEventReminder      *bool `gorm:"not null;default:1"`
-	EmailEventSuggestion    *bool `gorm:"not null;default:1"`
-	EmailEventUpdate        *bool `gorm:"not null;default:1"`
-	EmailUserLogin          *bool `gorm:"not null;default:1"`
+
+	EmailEventReminder   *bool `gorm:"not null;default:1"`
+	EmailEventSuggestion *bool `gorm:"not null;default:1"`
+	EmailEventUpdate     *bool `gorm:"not null;default:1"`
+	EmailUserLogin       *bool `gorm:"not null;default:1"`
+
+	SMSNumber          *string
+	SMSEventReminder   *bool `gorm:"not null;default:1"`
+	SMSEventSuggestion *bool `gorm:"not null;default:1"`
+	SMSEventUpdate     *bool `gorm:"not null;default:1"`
+	SMSUserLogin       *bool `gorm:"not null;default:1"`
+}
+
+var ServicePrefix = map[string]string{
+	"email": "Email",
+	"sms":   "SMS",
 }
 
 // marks a notification record as 'sent'

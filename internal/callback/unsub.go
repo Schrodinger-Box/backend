@@ -51,13 +51,15 @@ func HandleUnsub(ctx *gin.Context) {
 		} else {
 			subscription = *user.Subscription
 		}
-	} else {
-		// TODO: for implementation of SMS integration
+	} else if err := db.Where("sms_number = ?", query.Address).First(&subscription).Error; err != nil {
+		// query.Medium == "sms"
+		ctx.String(http.StatusInternalServerError, "Unable to fetch subscription object - "+err.Error())
+		return
 	}
 	// toggle subscription flags
 	val := reflect.ValueOf(&subscription).Elem()
 	for _, action := range actions {
-		field := val.FieldByName(strings.Title(query.Medium) + action)
+		field := val.FieldByName(model.ServicePrefix[query.Medium] + action)
 		if !field.IsValid() || !field.CanSet() || field.Kind() != reflect.Ptr || field.Elem().Kind() != reflect.Bool {
 			// invalid field name
 			continue

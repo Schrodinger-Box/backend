@@ -4,10 +4,12 @@ import (
 	"crypto/md5"
 	"fmt"
 	"net/mail"
+	"net/url"
 	"reflect"
 	"strconv"
-	"strings"
 	"time"
+
+	"github.com/zpnk/go-bitly"
 
 	"github.com/google/jsonapi"
 	"github.com/spf13/viper"
@@ -57,11 +59,11 @@ func (user *User) AfterDelete(tx *gorm.DB) error {
 // create notification for all enabled external service providers
 func (user *User) CreateNotificationAll(db *gorm.DB, action string, text string, sendTime time.Time, batchID ...uint) error {
 	enabledServices := viper.GetStringSlice("external.enable")
-	// bLink := bitly.New(viper.GetString("external.bitly.key")).Links
+	bLink := bitly.New(viper.GetString("external.bitly.key")).Links
 	if user.Subscription != nil {
 		subscription := reflect.ValueOf(*user.Subscription)
 		for _, enabledService := range enabledServices {
-			if subscribed := subscription.FieldByName(strings.Title(enabledService) + action).Interface().(*bool); !*subscribed {
+			if subscribed := subscription.FieldByName(ServicePrefix[enabledService] + action).Interface().(*bool); !*subscribed {
 				// skip if not subscribed
 				continue
 			}
@@ -69,7 +71,7 @@ func (user *User) CreateNotificationAll(db *gorm.DB, action string, text string,
 			switch enabledService {
 			case "telegram":
 				if chatId := user.Subscription.TelegramChatID; chatId == nil {
-					// skip if chatId is empty
+					// skip if chatId is empty (user is not subscribed to Telegram)
 					continue
 				} else {
 					target = strconv.Itoa(int(*chatId))
@@ -90,8 +92,19 @@ func (user *User) CreateNotificationAll(db *gorm.DB, action string, text string,
 				text += fmt.Sprintf("<br />(You may want to <a href=\"%s\"> unsub all</a> or just <a href=\"%s\"> unsub %s </a>)",
 					unsubAll, unsubAction, action)
 			case "sms":
-				// TODO: SMS Implementation
-				// Use short links for SMS: bLink.Shorten(...)
+				if number := user.Subscription.SMSNumber; number == nil {
+					// skip if number is empty (user is not subscribed to SMS)
+					continue
+				} else {
+					target = *number
+				}
+				baseUrl := viper.GetString("domain") + "/callback/unsub?medium=sms&address=" + url.QueryEscape(*user.Subscription.SMSNumber) + "&hash=" +
+					fmt.Sprintf("%x", md5.Sum([]byte(*user.Subscription.SMSNumber+viper.GetString("external.sms.unsubKey")))) +
+					"&action="
+				// use short links for SMS
+				unsubAll, _ := bLink.Shorten(baseUrl + "EventReminder,EventSuggestion,EventUpdate,UserLogin")
+				unsubAction, _ := bLink.Shorten(baseUrl + action)
+				text += fmt.Sprintf("\nunsub all: %s\nunsub %s: %s", unsubAll.URL, action, unsubAction.URL)
 			}
 			notification := Notification{
 				UserID:   &user.ID,

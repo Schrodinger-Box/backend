@@ -159,6 +159,10 @@ func main() {
 			if _, err := c.AddFunc(viper.GetString("external.email.cron"), func() { external.EmailCron(db) }); err != nil {
 				panic("Unable to start cron for Email - " + err.Error())
 			}
+		case "sms":
+			if _, err := c.AddFunc(viper.GetString("external.sms.cron"), func() { external.SmsCron(db) }); err != nil {
+				panic("Unable to start cron for SMS - " + err.Error())
+			}
 		default:
 			// do nothing for unknown service
 		}
