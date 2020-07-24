@@ -228,7 +228,7 @@ func UserSMSBind(ctx *gin.Context) {
 	}
 }
 
-func UserSMSDelete(ctx *gin.Context) {
+func UserSMSUnbind(ctx *gin.Context) {
 	number := ctx.Param("number")
 	if number[0] != '+' || number == "" {
 		// invalid number
@@ -250,7 +250,7 @@ func UserSMSDelete(ctx *gin.Context) {
 		misc.ReturnStandardError(ctx, http.StatusForbidden, "this number is not bound to your account")
 	} else if err := db.Model(subscription).Updates(map[string]interface{}{"sms_number": nil}).Error; err != nil {
 		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
-	} else if err := db.Where(&model.SMSVerification{SMSNumber: &number}).Update("status", "released").Error; err != nil {
+	} else if err := db.Model(&model.SMSVerification{}).Where("sms_number = ?", number).Update("status", "released").Error; err != nil {
 		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
 	} else {
 		ctx.Status(http.StatusNoContent)

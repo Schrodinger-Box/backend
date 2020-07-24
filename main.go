@@ -126,7 +126,7 @@ func main() {
 		apiRouter.GET("/files", middleware.TokenMiddleware(), api.FilesGet)
 
 		apiRouter.POST("/sms_bind/:number", middleware.TokenMiddleware(), api.UserSMSBind)
-		apiRouter.DELETE("/sms_bind/:number", middleware.TokenMiddleware(), api.UserSMSDelete)
+		apiRouter.DELETE("/sms_bind/:number", middleware.TokenMiddleware(), api.UserSMSUnbind)
 	}
 
 	callbackRouter := router.Group("/callback")
