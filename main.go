@@ -64,6 +64,7 @@ func main() {
 		model.Notification{},
 		model.NotificationBatch{},
 		model.NotificationSubscription{},
+		model.SMSVerification{},
 		model.File{},
 	}
 	if err := db.AutoMigrate(tables...); err != nil {
@@ -123,6 +124,9 @@ func main() {
 			fileRouter.DELETE("/:id", api.FileDelete)
 		}
 		apiRouter.GET("/files", middleware.TokenMiddleware(), api.FilesGet)
+
+		apiRouter.POST("/sms_bind/:number", middleware.TokenMiddleware(), api.UserSMSBind)
+		apiRouter.DELETE("/sms_bind/:number", middleware.TokenMiddleware(), api.UserSMSDelete)
 	}
 
 	callbackRouter := router.Group("/callback")

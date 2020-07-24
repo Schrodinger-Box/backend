@@ -1,13 +1,19 @@
 package api
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
+	"math/rand"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/jsonapi"
 	"gorm.io/gorm"
 
+	"schrodinger-box/internal/external"
 	"schrodinger-box/internal/misc"
 	"schrodinger-box/internal/model"
 )
@@ -142,6 +148,113 @@ func UserDelete(ctx *gin.Context) {
 	}
 	db := ctx.MustGet("DB").(*gorm.DB)
 	if err := db.Delete(&user).Error; err != nil {
+		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
+	} else {
+		ctx.Status(http.StatusNoContent)
+	}
+}
+
+func UserSMSBind(ctx *gin.Context) {
+	number := ctx.Param("number")
+	if number[0] != '+' || number == "" {
+		// invalid number
+		misc.ReturnStandardError(ctx, http.StatusBadRequest, "invalid number provided")
+		return
+	}
+	user, exist := ctx.Get("User")
+	if !exist {
+		misc.ReturnStandardError(ctx, http.StatusForbidden, "you must be a registered user to perform this action")
+		return
+	}
+	var result map[string]map[string]string
+	if data, err := ctx.GetRawData(); err != nil {
+		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
+		return
+	} else if err := json.Unmarshal(data, &result); err != nil {
+		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
+		return
+	}
+	db := ctx.MustGet("DB").(*gorm.DB)
+	if _, exist := result["meta"]; exist {
+		subscription := &model.NotificationSubscription{}
+		sms := &model.SMSVerification{}
+		if err := db.Where("user_id = ?", user.(*model.User).ID).FirstOrInit(subscription).Error; err != nil {
+			misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
+		} else if subscription.SMSNumber != nil {
+			misc.ReturnStandardError(ctx, http.StatusForbidden, "there is already a number bound to your account")
+		} else if err := db.Where("sms_number = ?", number).FirstOrInit(sms).Error; err != nil {
+			misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
+		} else if sms.Status != nil && *sms.Status == "locked" {
+			misc.ReturnStandardError(ctx, http.StatusForbidden, "this number has been bound to someone else")
+		} else if token, exist := result["meta"]["verification_code"]; exist {
+			// verification code provided, try to verify if it is correct
+			if sms.Token == nil || *sms.Token != token {
+				misc.ReturnStandardError(ctx, http.StatusForbidden, "invalid verification code")
+			} else {
+				subscription.SMSNumber = &number
+				subscription.UserID = &user.(*model.User).ID
+				locked := "locked"
+				sms.Status = &locked
+				if err := db.Save(subscription).Error; err != nil {
+					misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
+				} else if err := db.Save(sms).Error; err != nil {
+					misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
+				} else {
+					ctx.JSON(http.StatusOK, gin.H{
+						"data": nil,
+					})
+				}
+			}
+		} else {
+			// verification code is not provided, try to generate a new one for this number
+			rand.Seed(time.Now().UnixNano())
+			// token is not provided, generate a new one for the number now
+			token := rand.Intn(999999)
+			text := fmt.Sprintf("Your verification code for Schrodinger's Box is [%d]", token)
+			if err := external.SMSSend(number, text); err != nil {
+				misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
+			} else {
+				sms.SMSNumber = &number
+				tokenString := strconv.Itoa(token)
+				sms.Token = &tokenString
+				if err := db.Save(sms).Error; err != nil {
+					misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
+				} else {
+					ctx.JSON(http.StatusOK, gin.H{
+						"data": nil,
+					})
+				}
+			}
+		}
+	} else {
+		// invalid input
+		misc.ReturnStandardError(ctx, http.StatusBadRequest, "meta object is missing")
+	}
+}
+
+func UserSMSDelete(ctx *gin.Context) {
+	number := ctx.Param("number")
+	if number[0] != '+' || number == "" {
+		// invalid number
+		misc.ReturnStandardError(ctx, http.StatusBadRequest, "invalid number provided")
+		return
+	}
+	user, exist := ctx.Get("User")
+	if !exist {
+		misc.ReturnStandardError(ctx, http.StatusForbidden, "you must be a registered user to perform this action")
+		return
+	}
+	db := ctx.MustGet("DB").(*gorm.DB)
+	subscription := &model.NotificationSubscription{}
+	if err := db.Where("sms_number = ?", number).First(subscription).Error; errors.Is(err, gorm.ErrRecordNotFound) {
+		misc.ReturnStandardError(ctx, http.StatusNotFound, "this number is not bound to any user account")
+	} else if err != nil {
+		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
+	} else if *subscription.UserID != user.(*model.User).ID {
+		misc.ReturnStandardError(ctx, http.StatusForbidden, "this number is not bound to your account")
+	} else if err := db.Model(subscription).Updates(map[string]interface{}{"sms_number": nil}).Error; err != nil {
+		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
+	} else if err := db.Where(&model.SMSVerification{SMSNumber: &number}).Update("status", "released").Error; err != nil {
 		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
 	} else {
 		ctx.Status(http.StatusNoContent)

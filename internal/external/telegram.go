@@ -173,7 +173,7 @@ func TelegramCron(db *gorm.DB, bot *tgbotapi.BotAPI) {
 	db.Where("send_time < ?", time.Now()).Where("medium = ?", "telegram").Find(&notifications)
 	for _, notification := range notifications {
 		chatId, _ := strconv.Atoi(*notification.Target)
-		if _, err := telegramSend(bot, int64(chatId), *notification.Text); err != nil {
+		if _, err := TelegramSend(bot, int64(chatId), *notification.Text); err != nil {
 			fmt.Fprintf(gin.DefaultWriter, "[Schrodinger's Box] Cannot send message - %s", err.Error())
 			continue
 		}
@@ -181,7 +181,7 @@ func TelegramCron(db *gorm.DB, bot *tgbotapi.BotAPI) {
 	}
 }
 
-func telegramSend(bot *tgbotapi.BotAPI, chatId int64, message string) (tgbotapi.Message, error) {
+func TelegramSend(bot *tgbotapi.BotAPI, chatId int64, message string) (tgbotapi.Message, error) {
 	return bot.Send(tgbotapi.NewMessage(chatId, message))
 }
 

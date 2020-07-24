@@ -19,7 +19,7 @@ func EmailCron(db *gorm.DB) {
 	var notifications []*model.Notification
 	db.Where("send_time < ?", time.Now()).Where("medium = ?", "email").Find(&notifications)
 	for _, notification := range notifications {
-		if err := emailSend(*notification.Target, *notification.Text); err != nil {
+		if err := EmailSend(*notification.Target, *notification.Text); err != nil {
 			fmt.Fprintf(gin.DefaultWriter, "[Schrodinger's Box] Cannot send email - %s", err.Error())
 			continue
 		}
@@ -28,7 +28,7 @@ func EmailCron(db *gorm.DB) {
 }
 
 // initiate a new email client and send a text to @to (an email address in RFC 5322 format)
-func emailSend(toString string, messageString string) (err error) {
+func EmailSend(toString string, messageString string) (err error) {
 	var from, to *mail.Email
 	if from, err = mail.ParseEmail(viper.GetString("external.email.from")); err != nil {
 		return

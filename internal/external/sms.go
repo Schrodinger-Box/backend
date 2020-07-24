@@ -18,7 +18,7 @@ func SmsCron(db *gorm.DB) {
 	var notifications []*model.Notification
 	db.Where("send_time < ?", time.Now()).Where("medium = ?", "sms").Find(&notifications)
 	for _, notification := range notifications {
-		if err := smsSend(*notification.Target, *notification.Text); err != nil {
+		if err := SMSSend(*notification.Target, *notification.Text); err != nil {
 			fmt.Fprintf(gin.DefaultWriter, "[Schrodinger's Box] Cannot send sms - %s", err.Error())
 			continue
 		}
@@ -26,7 +26,7 @@ func SmsCron(db *gorm.DB) {
 	}
 }
 
-func smsSend(to string, text string) error {
+func SMSSend(to string, text string) error {
 	sid := viper.GetString("external.sms.sid")
 	token := viper.GetString("external.sms.token")
 	urlString := "https://api.twilio.com/2010-04-01/Accounts/" + sid + "/Messages.json"

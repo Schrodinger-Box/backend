@@ -83,6 +83,21 @@ type NotificationSubscription struct {
 	SMSEventSuggestion *bool `gorm:"not null;default:1"`
 	SMSEventUpdate     *bool `gorm:"not null;default:1"`
 	SMSUserLogin       *bool `gorm:"not null;default:1"`
+
+	DBTime
+}
+
+type SMSVerification struct {
+	ID        uint    `gorm:"primary"`
+	SMSNumber *string `gorm:"not null;unique"`
+	Token     *string `gorm:"not null"`
+
+	// Status codes:
+	// - created  : this is a new number in the system and someone tries to bind it to his/her account
+	// - locked   : some user has bound their account to this number
+	// - released : this number was originally bound to some account, but was unbound after that
+	Status *string `gorm:"default:'created'"`
+	DBTime
 }
 
 var ServicePrefix = map[string]string{
