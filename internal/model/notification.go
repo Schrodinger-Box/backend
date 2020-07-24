@@ -93,10 +93,9 @@ type SMSVerification struct {
 	Token     *string `gorm:"not null"`
 
 	// Status codes:
-	// - created  : this is a new number in the system and someone tries to bind it to his/her account
 	// - locked   : some user has bound their account to this number
-	// - released : this number was originally bound to some account, but was unbound after that
-	Status *string `gorm:"default:'created'"`
+	// - released : this number is not bound to any user account
+	Status *string `gorm:"default:'released'"`
 	DBTime
 }
 

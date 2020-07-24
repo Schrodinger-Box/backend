@@ -200,9 +200,7 @@ func UserSMSBind(ctx *gin.Context) {
 				} else if err := db.Save(sms).Error; err != nil {
 					misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
 				} else {
-					ctx.JSON(http.StatusOK, gin.H{
-						"data": nil,
-					})
+					ctx.Status(http.StatusNoContent)
 				}
 			}
 		} else {
@@ -220,9 +218,7 @@ func UserSMSBind(ctx *gin.Context) {
 				if err := db.Save(sms).Error; err != nil {
 					misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
 				} else {
-					ctx.JSON(http.StatusOK, gin.H{
-						"data": nil,
-					})
+					ctx.Status(http.StatusNoContent)
 				}
 			}
 		}
