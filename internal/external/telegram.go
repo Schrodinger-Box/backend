@@ -40,7 +40,7 @@ func TelegramLoop(db *gorm.DB, bot *tgbotapi.BotAPI) {
 		}
 		if update.Message.IsCommand() {
 			switch update.Message.Command() {
-			case "help":
+			case "help", "start":
 				msg.Text = "Welcome to Schrodinger's Box Telegram bot!\n" +
 					"You can:\n"
 				if subscription == nil {
@@ -48,6 +48,7 @@ func TelegramLoop(db *gorm.DB, bot *tgbotapi.BotAPI) {
 				} else {
 					msg.Text += "type /unsub to unsubscribe to ALL notifications from Schrodinger's Box;\n"
 					msg.Text += "type /adjust to adjust what type of messages you want to subscribe;\n"
+					msg.Text += "type /check to check who you subscribed to;\n"
 				}
 				msg.Text += "type /help to show this message again."
 			case "subscribe":
@@ -69,8 +70,23 @@ func TelegramLoop(db *gorm.DB, bot *tgbotapi.BotAPI) {
 					}
 				}
 			case "adjust":
-				msg.Text = getSubscriptionText(subscription)
-				actionCache[chatId] = "adjust"
+				if subscription == nil {
+					msg.Text = "You have not subscribed to anyone!"
+				} else {
+					msg.Text = getSubscriptionText(subscription)
+					actionCache[chatId] = "adjust"
+				}
+			case "check":
+				if subscription == nil {
+					msg.Text = "You have not subscribed to anyone!"
+				} else {
+					user := &model.User{}
+					if err := db.First(user, subscription.UserID).Error; err != nil {
+						msg.Text = "Error occurred when retrieving user information"
+					} else {
+						msg.Text = fmt.Sprintf("You have subscribed to user %s (uid=%d).", *user.Nickname, user.ID)
+					}
+				}
 			}
 		} else {
 			if val, ok := actionCache[chatId]; ok && val != "" {
@@ -135,7 +151,7 @@ func TelegramLoop(db *gorm.DB, bot *tgbotapi.BotAPI) {
 				case "adjust":
 					if update.Message.Text == "done" {
 						actionCache[chatId] = ""
-						msg.Text = "OK. You are now at the main menu again."
+						msg.Text = "OK. You are now at the main menu again.\nType /help to list commands available."
 					} else {
 						var err error
 						switch update.Message.Text {
