@@ -87,6 +87,9 @@ func TelegramLoop(db *gorm.DB, bot *tgbotapi.BotAPI) {
 						msg.Text = fmt.Sprintf("You have subscribed to user %s (uid=%d).", *user.Nickname, user.ID)
 					}
 				}
+			default:
+				msg.Text = "We can do anything with this command :(\n" +
+					"Maybe you would like to use /help to list out all available commands?"
 			}
 		} else {
 			if val, ok := actionCache[chatId]; ok && val != "" {

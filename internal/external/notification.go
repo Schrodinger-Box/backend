@@ -20,7 +20,7 @@ var timeOffset = map[string]time.Duration{
 func NotificationCron(db *gorm.DB) {
 	// generate notifications from batches
 	var batches []*model.NotificationBatch
-	db.Where("generate_time < ?", time.Now()).Find(&batches)
+	db.Find(&batches)
 	for _, batch := range batches {
 		link := strings.Split(*batch.LinkID, "-")
 		switch link[0] {

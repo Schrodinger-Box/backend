@@ -64,9 +64,10 @@ func EventCreate(ctx *gin.Context) {
 	event.OrganizerID = &user.ID
 	event.Organizer = user
 	images := event.Images
-	event.Images = nil
 	db := ctx.MustGet("DB").(*gorm.DB)
-	if err := db.Save(event).Error; err != nil {
+	tx := db.Begin()
+	// we must omit images as inspection has to be gone through before they are linked
+	if err := tx.Omit("Images").Save(event).Error; err != nil {
 		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -88,6 +89,13 @@ func EventCreate(ctx *gin.Context) {
 		} else {
 			continue
 		}
+		// roll back the action of event creation if any of the images cannot pass integrity check
+		tx.Rollback()
+		return
+	}
+	if err := tx.Commit().Error; err != nil {
+		tx.Rollback()
+		misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
 		return
 	}
 	ctx.Status(http.StatusCreated)

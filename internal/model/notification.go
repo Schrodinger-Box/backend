@@ -12,7 +12,7 @@ import (
 
 /*
  * For sending notifications, a batch will be first generated with a unique LinkID.
- * After GenerateTime, notification objects will be generated for all users subscribed to a specific medium.
+ * As soon as cron job executes, notification objects will be generated for all users subscribed to a specific medium.
  */
 type Notification struct {
 	ID      uint  `gorm:"primarykey"`
@@ -48,8 +48,6 @@ type NotificationBatch struct {
 	// :nickname: , :fullname: , :email: , :nusid: , :event_title: , :time_begin: , :time_end:
 	// (custom tags) :c1: , :c2: , :c3: , :c4: , :c5:
 	Template *string `gorm:"not null"`
-	// notification will be generated after this generate time
-	GenerateTime *time.Time `gorm:"not null"`
 	// Status codes:
 	// - created   : scheduled but have not generate notification messages yet
 	// - generated : notification has been generated
@@ -100,8 +98,9 @@ type SMSVerification struct {
 }
 
 var ServicePrefix = map[string]string{
-	"email": "Email",
-	"sms":   "SMS",
+	"telegram": "Telegram",
+	"email":    "Email",
+	"sms":      "SMS",
 }
 
 // marks a notification record as 'sent'
