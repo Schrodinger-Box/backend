@@ -1,0 +1,6 @@
+1. github.com/google/jsonapi does not support many-to-many relationship which can caused incomplete data when loading offline
+
+2. Loaded HTML Templates (3):
+-
+- callback.tmpl
+- error.tmpl

@@ -1,4 +1,6 @@
-# Schrödinger's Box
+# Schrödinger's Box Backend
+
+**This program is developed during Orbital 2020 and the development has ceased since the end of the event. It is no longer actively maintained.**
 
 This is the backend server of Schrödinger's Box - an event sharing and
 publicizing platform targeting students and event organizers within NUS.
@@ -8,6 +10,8 @@ backend server complies with [JSON:API Specification v1.0](https://jsonapi.org/f
 
 [![Build Status](https://travis-ci.com/Schrodinger-Box/backend.svg?branch=master)](https://travis-ci.com/Schrodinger-Box/backend)
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FSchrodinger-Box%2Fbackend.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2FSchrodinger-Box%2Fbackend?ref=badge_shield)
+
+Link to frontend: https://github.com/Schrodinger-Box/frontend 
 
 ## API documentation
 API specification for this app is written in [OpenAPI Specification (Version 3.0.3)](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.3.md).

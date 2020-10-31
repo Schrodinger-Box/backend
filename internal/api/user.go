@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -207,14 +206,13 @@ func UserSMSBind(ctx *gin.Context) {
 			// verification code is not provided, try to generate a new one for this number
 			rand.Seed(time.Now().UnixNano())
 			// token is not provided, generate a new one for the number now
-			token := rand.Intn(999999)
-			text := fmt.Sprintf("Your verification code for Schrodinger's Box is [%d]", token)
+			token := fmt.Sprintf("%06d", rand.Intn(999999))
+			text := fmt.Sprintf("Your verification code for Schrodinger's Box is [%s]", token)
 			if err := external.SMSSend(number, text); err != nil {
 				misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
 			} else {
 				sms.SMSNumber = &number
-				tokenString := strconv.Itoa(token)
-				sms.Token = &tokenString
+				sms.Token = &token
 				if err := db.Save(sms).Error; err != nil {
 					misc.ReturnStandardError(ctx, http.StatusInternalServerError, err.Error())
 				} else {
