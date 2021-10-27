@@ -5,3 +5,5 @@ schrodinger-box.iml
 schrodinger-box.yaml
 # Ignore go vendor local copies
 vendor/
+# Ignore executable
+schrodinger-box
