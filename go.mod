@@ -3,8 +3,7 @@ module schrodinger-box
 go 1.14
 
 require (
-	github.com/Azure/azure-pipeline-go v0.2.3 // indirect
-	github.com/Azure/azure-storage-blob-go v0.10.0
+	github.com/Azure/azure-storage-blob-go v0.14.0
 	github.com/Schrodinger-Box/gormid v0.0.0-20200627084402-650a6798b83b
 	github.com/Schrodinger-Box/openid-go v1.0.2-0.20200625063644-4dcafb84a6bc
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
@@ -12,7 +11,7 @@ require (
 	github.com/go-telegram-bot-api/telegram-bot-api v4.6.4+incompatible
 	github.com/golang/protobuf v1.4.2 // indirect
 	github.com/google/jsonapi v0.0.0-20170905151142-7822e6f331ab
-	github.com/google/uuid v1.1.1
+	github.com/google/uuid v1.2.0
 	github.com/json-iterator/go v1.1.10 // indirect
 	github.com/mitchellh/mapstructure v1.3.2
 	github.com/pelletier/go-toml v1.8.0 // indirect
@@ -28,7 +27,6 @@ require (
 	github.com/technoweenie/multipartstreamer v1.0.1 // indirect
 	github.com/zpnk/go-bitly v0.0.0-20170609220507-2da97f724d1d
 	golang.org/x/net v0.0.0-20200707034311-ab3426394381 // indirect
-	golang.org/x/sys v0.0.0-20200625212154-ddb9806d33ae // indirect
 	golang.org/x/text v0.3.3 // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
 	gopkg.in/ini.v1 v1.57.0 // indirect
